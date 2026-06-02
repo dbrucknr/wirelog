@@ -66,8 +66,10 @@ impl<W: Write + Send + 'static> Context<W> {
     pub fn dur(mut self, key: &str, val: std::time::Duration) -> Self {
         encode::append_key(&mut self.buf, key);
         let mut b = itoa::Buffer::new();
-        self.buf
-            .extend_from_slice(b.format(u64::try_from(val.as_millis()).unwrap_or(u64::MAX)).as_bytes());
+        self.buf.extend_from_slice(
+            b.format(u64::try_from(val.as_millis()).unwrap_or(u64::MAX))
+                .as_bytes(),
+        );
         self
     }
 

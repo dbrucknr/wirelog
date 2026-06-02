@@ -1,7 +1,6 @@
-pub(crate) const RFC3339_MILLIS: &[time::format_description::BorrowedFormatItem<'static>] =
-    time::macros::format_description!(
-        "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z"
-    );
+pub(crate) const RFC3339_MILLIS: &[time::format_description::BorrowedFormatItem<'static>] = time::macros::format_description!(
+    "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z"
+);
 
 pub(crate) fn append_key(buf: &mut Vec<u8>, key: &str) {
     buf.push(b',');

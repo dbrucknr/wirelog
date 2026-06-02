@@ -89,8 +89,10 @@ impl<W: Write + Send + 'static> Event<W> {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
             let mut b = itoa::Buffer::new();
-            self.buf
-                .extend_from_slice(b.format(u64::try_from(val.as_millis()).unwrap_or(u64::MAX)).as_bytes());
+            self.buf.extend_from_slice(
+                b.format(u64::try_from(val.as_millis()).unwrap_or(u64::MAX))
+                    .as_bytes(),
+            );
         }
         self
     }

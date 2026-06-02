@@ -380,7 +380,12 @@ mod tests {
         let raw = buf.lock().unwrap();
         let output = std::str::from_utf8(&raw).unwrap();
         let lines: Vec<&str> = output.lines().collect();
-        assert_eq!(lines.len(), n, "expected {n} complete lines, got {}", lines.len());
+        assert_eq!(
+            lines.len(),
+            n,
+            "expected {n} complete lines, got {}",
+            lines.len()
+        );
         for line in lines {
             serde_json::from_str::<Value>(line).expect("each line must be valid JSON");
         }
