@@ -12,7 +12,6 @@ use crate::level::Level;
 pub struct Event<W> {
     buf: Vec<u8>,
     writer: Option<Arc<Mutex<W>>>,
-    level: Level,
 }
 
 impl<W: Write + Send + 'static> Event<W> {
@@ -22,19 +21,11 @@ impl<W: Write + Send + 'static> Event<W> {
         buf.extend_from_slice(level.as_str().as_bytes());
         buf.push(b'"');
         buf.extend_from_slice(prefix);
-        Self {
-            buf,
-            writer: Some(writer),
-            level,
-        }
+        Self { buf, writer: Some(writer) }
     }
 
     pub(crate) fn disabled() -> Self {
-        Self {
-            buf: Vec::new(),
-            writer: None,
-            level: Level::Trace,
-        }
+        Self { buf: Vec::new(), writer: None }
     }
 
     pub fn str(mut self, key: &str, val: &str) -> Self {
