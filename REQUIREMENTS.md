@@ -79,6 +79,18 @@ The core API is fully synchronous — `.msg()` is never `async`. Blocking I/O on
 
 `async fn` log call sites (`.await` on `.msg()`) are explicitly a non-goal — the channel approach covers the async executor case without viral `async` in the API.
 
+## Testing
+
+### Philosophy
+
+wirelog is a *writer*, not a parser — it never consumes untrusted external input. All inputs (keys, values, sink) are programmer-controlled. This shapes the testing strategy:
+
+- **Unit tests** cover each field type, JSON validity, level filtering, field ordering, and the disabled-event fast-path.
+- **Property-based tests** (`proptest`) cover the JSON encoder. `encode::write_escaped` is the highest-risk code in the codebase: it is hand-rolled, byte-level, and must handle every possible string a caller can pass. Generating arbitrary strings and asserting the full emitted line round-trips through `serde_json` is low-effort and provides much stronger coverage than hand-written cases alone. Two property tests are required:
+  1. Arbitrary `(key, value)` string pairs — assert the full log line is valid JSON and the value round-trips exactly.
+  2. All 256 possible byte values appearing in a string value — assert each produces valid JSON (exercising the control-character escape branches exhaustively).
+- **Fuzzing** (`cargo-fuzz`) is explicitly a non-goal. Fuzzing targets crash surfaces in code that processes untrusted binary input. wirelog has no such surface: there is no deserialization, no format parsing, and the entire codebase is safe Rust. The proptest suite covers the same encoder correctness concerns with far less infrastructure overhead.
+
 ## Non-goals (v0.1)
 
 - `log` crate facade compatibility (may add later as optional feature)

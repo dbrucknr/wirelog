@@ -64,7 +64,7 @@ impl<W: Write + Send + 'static> Context<W> {
         encode::append_key(&mut self.buf, key);
         let mut b = itoa::Buffer::new();
         self.buf
-            .extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
+            .extend_from_slice(b.format(u64::try_from(val.as_millis()).unwrap_or(u64::MAX)).as_bytes());
         self
     }
 

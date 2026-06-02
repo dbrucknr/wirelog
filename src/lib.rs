@@ -247,7 +247,7 @@ mod tests {
     }
 
     #[test]
-    fn context_fields_precede_level_field() {
+    fn level_field_precedes_context_fields() {
         let (log, buf) = make_logger();
         let sub = log.with().str("ctx", "c").logger();
         sub.info().msg("ok");
