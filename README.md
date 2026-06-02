@@ -2,6 +2,10 @@
 
 A zero-allocation structured logger for Rust with [zerolog](https://github.com/rs/zerolog)-inspired ergonomics.
 
+---
+
+[![CI](https://github.com/dbrucknr/wirelog/actions/workflows/ci.yml/badge.svg)](https://github.com/dbrucknr/wirelog/actions/workflows/ci.yml)
+
 ## Goals
 
 - Fluent, typed builder API — `.msg()` is the only terminal call that flushes
