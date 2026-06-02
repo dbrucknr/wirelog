@@ -27,7 +27,7 @@ mod tests {
         }
     }
 
-    fn make_logger() -> (Logger, Arc<Mutex<Vec<u8>>>) {
+    fn make_logger() -> (Logger<SharedBuf>, Arc<Mutex<Vec<u8>>>) {
         let buf = Arc::new(Mutex::new(Vec::new()));
         let log = Logger::new(SharedBuf(Arc::clone(&buf)));
         (log, buf)

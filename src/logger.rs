@@ -3,14 +3,13 @@ use std::sync::{Arc, Mutex};
 
 use crate::{Event, Level};
 
-#[derive(Clone)]
-pub struct Logger {
-    writer: Arc<Mutex<dyn Write + Send>>,
+pub struct Logger<W> {
+    writer: Arc<Mutex<W>>,
     level: Level,
 }
 
-impl Logger {
-    pub fn new<W: Write + Send + 'static>(writer: W) -> Self {
+impl<W: Write + Send + 'static> Logger<W> {
+    pub fn new(writer: W) -> Self {
         Self {
             writer: Arc::new(Mutex::new(writer)),
             level: Level::Trace,
@@ -22,7 +21,7 @@ impl Logger {
         self
     }
 
-    fn event(&self, level: Level) -> Event {
+    fn event(&self, level: Level) -> Event<W> {
         if level < self.level {
             Event::disabled()
         } else {
@@ -30,11 +29,20 @@ impl Logger {
         }
     }
 
-    pub fn trace(&self) -> Event { self.event(Level::Trace) }
-    pub fn debug(&self) -> Event { self.event(Level::Debug) }
-    pub fn info(&self)  -> Event { self.event(Level::Info)  }
-    pub fn warn(&self)  -> Event { self.event(Level::Warn)  }
-    pub fn error(&self) -> Event { self.event(Level::Error) }
-    pub fn fatal(&self) -> Event { self.event(Level::Fatal) }
-    pub fn panic(&self) -> Event { self.event(Level::Panic) }
+    pub fn trace(&self) -> Event<W> { self.event(Level::Trace) }
+    pub fn debug(&self) -> Event<W> { self.event(Level::Debug) }
+    pub fn info(&self)  -> Event<W> { self.event(Level::Info)  }
+    pub fn warn(&self)  -> Event<W> { self.event(Level::Warn)  }
+    pub fn error(&self) -> Event<W> { self.event(Level::Error) }
+    pub fn fatal(&self) -> Event<W> { self.event(Level::Fatal) }
+    pub fn panic(&self) -> Event<W> { self.event(Level::Panic) }
+}
+
+impl<W: Write + Send + 'static> Clone for Logger<W> {
+    fn clone(&self) -> Self {
+        Self {
+            writer: Arc::clone(&self.writer),
+            level: self.level,
+        }
+    }
 }
