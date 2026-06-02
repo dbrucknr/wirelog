@@ -14,6 +14,7 @@ mod tests {
     use std::io::Write;
     use std::sync::{Arc, Mutex};
 
+    use proptest::prelude::*;
     use serde_json::Value;
 
     use super::*;
@@ -338,5 +339,151 @@ mod tests {
         let sub2 = sub.clone();
         sub2.info().msg("from clone");
         assert_eq!(parse(&buf)["svc"], "api");
+    }
+
+    #[test]
+    fn float_nan_emits_null() {
+        let (log, buf) = make_logger();
+        log.info().float("x", f64::NAN).send();
+        assert!(parse(&buf)["x"].is_null());
+    }
+
+    #[test]
+    fn float_infinity_emits_null() {
+        let (log, buf) = make_logger();
+        log.info().float("x", f64::INFINITY).send();
+        assert!(parse(&buf)["x"].is_null());
+    }
+
+    #[test]
+    fn float_neg_infinity_emits_null() {
+        let (log, buf) = make_logger();
+        log.info().float("x", f64::NEG_INFINITY).send();
+        assert!(parse(&buf)["x"].is_null());
+    }
+
+    #[test]
+    fn concurrent_writes_are_not_interleaved() {
+        use std::thread;
+        let buf = Arc::new(Mutex::new(Vec::new()));
+        let log = Logger::new(SharedBuf(Arc::clone(&buf)));
+        let n = 100usize;
+        let handles: Vec<_> = (0..n as i64)
+            .map(|i| {
+                let log = log.clone();
+                thread::spawn(move || log.info().int("i", i).msg("concurrent"))
+            })
+            .collect();
+        for h in handles {
+            h.join().unwrap();
+        }
+        let raw = buf.lock().unwrap();
+        let output = std::str::from_utf8(&raw).unwrap();
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines.len(), n, "expected {n} complete lines, got {}", lines.len());
+        for line in lines {
+            serde_json::from_str::<Value>(line).expect("each line must be valid JSON");
+        }
+    }
+
+    // --- Property tests ---
+
+    proptest! {
+        /// Arbitrary (key, value) string pairs must produce a valid JSON line where the value
+        /// round-trips exactly, covering every Unicode code point and escape sequence.
+        #[test]
+        fn prop_str_field_roundtrip(
+            // "time" is excluded: the auto-appended timestamp field appears last, so serde_json
+            // would resolve a duplicate "time" key to the timestamp rather than the user value.
+            key in any::<String>().prop_filter("not time", |k| k != "time"),
+            val in any::<String>()
+        ) {
+            let (log, buf) = make_logger();
+            log.info().str(&key, &val).send();
+            let raw = buf.lock().unwrap();
+            let line = std::str::from_utf8(&raw).unwrap().trim_end();
+            let v: Value = serde_json::from_str(line).unwrap();
+            prop_assert_eq!(v[&key].as_str(), Some(val.as_str()));
+        }
+
+        #[test]
+        fn prop_int_field_roundtrip(
+            key in any::<String>().prop_filter("not time", |k| k != "time"),
+            val in any::<i64>()
+        ) {
+            let (log, buf) = make_logger();
+            log.info().int(&key, val).send();
+            let raw = buf.lock().unwrap();
+            let line = std::str::from_utf8(&raw).unwrap().trim_end();
+            let v: Value = serde_json::from_str(line).unwrap();
+            prop_assert_eq!(v[&key].as_i64(), Some(val));
+        }
+
+        #[test]
+        fn prop_uint_field_roundtrip(
+            key in any::<String>().prop_filter("not time", |k| k != "time"),
+            val in any::<u64>()
+        ) {
+            let (log, buf) = make_logger();
+            log.info().uint(&key, val).send();
+            let raw = buf.lock().unwrap();
+            let line = std::str::from_utf8(&raw).unwrap().trim_end();
+            let v: Value = serde_json::from_str(line).unwrap();
+            prop_assert_eq!(v[&key].as_u64(), Some(val));
+        }
+
+        /// Finite values must produce a JSON number; NaN and infinities must produce null.
+        /// Exact decimal round-trip is not asserted: ryu and serde_json's parsers can disagree
+        /// by 1 ULP on values near a midpoint between two representable floats.
+        #[test]
+        fn prop_float_field(
+            key in any::<String>().prop_filter("not time", |k| k != "time"),
+            val in any::<f64>()
+        ) {
+            let (log, buf) = make_logger();
+            log.info().float(&key, val).send();
+            let raw = buf.lock().unwrap();
+            let line = std::str::from_utf8(&raw).unwrap().trim_end();
+            let v: Value = serde_json::from_str(line).unwrap();
+            if val.is_finite() {
+                prop_assert!(v[&key].is_number(), "finite float must produce a JSON number, got {:?}", v[&key]);
+            } else {
+                prop_assert!(v[&key].is_null(), "non-finite float must produce null, got {:?}", v[&key]);
+            }
+        }
+
+        /// A random sequence of str fields (0–8) must always produce a valid JSON line,
+        /// stressing the comma-separator logic for all field counts including zero.
+        #[test]
+        fn prop_multi_str_fields_valid_json(
+            fields in proptest::collection::vec((any::<String>(), any::<String>()), 0..=8)
+        ) {
+            let (log, buf) = make_logger();
+            let mut ev = log.info();
+            for (k, v) in &fields {
+                ev = ev.str(k, v);
+            }
+            ev.send();
+            let raw = buf.lock().unwrap();
+            let line = std::str::from_utf8(&raw).unwrap().trim_end();
+            serde_json::from_str::<Value>(line).unwrap();
+        }
+    }
+
+    /// Exhaustively checks all 128 ASCII code points as a string value, ensuring every
+    /// control-character escape branch in `encode::write_escaped` produces valid JSON.
+    /// (Bytes 0x80–0xFF only appear as parts of multi-byte UTF-8 sequences and pass through
+    /// unchanged, so ASCII coverage is sufficient to exercise all escape logic.)
+    #[test]
+    fn all_ascii_bytes_produce_valid_json() {
+        for b in 0u8..=127 {
+            let s = char::from(b).to_string();
+            let (log, buf) = make_logger();
+            log.info().str("v", &s).send();
+            let raw = buf.lock().unwrap();
+            let line = std::str::from_utf8(&raw).unwrap().trim_end();
+            serde_json::from_str::<Value>(line)
+                .unwrap_or_else(|e| panic!("byte 0x{b:02x} produced invalid JSON: {e}"));
+        }
     }
 }

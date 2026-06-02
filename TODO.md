@@ -16,9 +16,14 @@
 - [x] Write basic unit tests: field encoding, JSON validity, level filtering
 - [x] Enforce RFC 3339 millisecond precision on all timestamps (`"time"` field and `.time()`) — `Rfc3339` omits sub-seconds when zero, violating the spec
 - [x] Fix `dur` truncation: `as_millis()` returns `u128`; cast to `u64` silently overflows for extreme durations — use saturating conversion
-- [ ] Add `proptest` as a `dev-dependency` and write property tests for the JSON encoder:
+- [x] Add `proptest` as a `dev-dependency` and write property tests for the JSON encoder:
   - Arbitrary `(key, value)` string pairs → emitted line is valid JSON and value round-trips exactly
   - All 256 possible byte values in a string value → each produces valid JSON
+  - Arbitrary `i64`/`u64` field values round-trip exactly
+  - Arbitrary `f64` field values: finite → JSON number, non-finite → `null`
+  - Random multi-field events (0–8 fields) always produce valid JSON
+- [x] Fix `float()` NaN/Infinity: `ryu` formats these as `NaN`/`inf` which are not valid JSON — emit `null` instead
+- [x] Add concurrent write test: 100 threads writing simultaneously produce 100 complete, non-interleaved JSON lines
 
 ## Phase 2 — Subloggers & context
 

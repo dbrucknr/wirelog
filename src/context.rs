@@ -43,8 +43,12 @@ impl<W: Write + Send + 'static> Context<W> {
 
     pub fn float(mut self, key: &str, val: f64) -> Self {
         encode::append_key(&mut self.buf, key);
-        let mut b = ryu::Buffer::new();
-        self.buf.extend_from_slice(b.format(val).as_bytes());
+        if val.is_finite() {
+            let mut b = ryu::Buffer::new();
+            self.buf.extend_from_slice(b.format(val).as_bytes());
+        } else {
+            self.buf.extend_from_slice(b"null");
+        }
         self
     }
 
