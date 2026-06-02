@@ -107,7 +107,7 @@ mod tests {
             .time("at", std::time::SystemTime::UNIX_EPOCH)
             .msg("ok");
         let v = parse(&buf);
-        assert_eq!(v["at"], "1970-01-01T00:00:00Z");
+        assert_eq!(v["at"], "1970-01-01T00:00:00.000Z");
     }
 
     #[test]
@@ -319,7 +319,7 @@ mod tests {
         assert_eq!(v["f"], 1.5);
         assert_eq!(v["b"], true);
         assert_eq!(v["d"], 10);
-        assert_eq!(v["t"], "1970-01-01T00:00:00Z");
+        assert_eq!(v["t"], "1970-01-01T00:00:00.000Z");
     }
 
     #[test]

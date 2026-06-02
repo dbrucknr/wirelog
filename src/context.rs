@@ -1,7 +1,6 @@
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
-use time::format_description::well_known::Rfc3339;
 
 use crate::Level;
 use crate::encode;
@@ -71,7 +70,7 @@ impl<W: Write + Send + 'static> Context<W> {
     pub fn time(mut self, key: &str, val: std::time::SystemTime) -> Self {
         encode::append_key(&mut self.buf, key);
         self.buf.push(b'"');
-        let _ = OffsetDateTime::from(val).format_into(&mut self.buf, &Rfc3339);
+        let _ = OffsetDateTime::from(val).format_into(&mut self.buf, encode::RFC3339_MILLIS);
         self.buf.push(b'"');
         self
     }

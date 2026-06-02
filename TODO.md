@@ -14,7 +14,7 @@
 - [x] Implement `.dur(key, val)` and `.time(key, val)` field methods
 - [x] Implement `fatal()` and `panic()` as pure level designators (no exit/panic — caller's responsibility)
 - [x] Write basic unit tests: field encoding, JSON validity, level filtering
-- [ ] Enforce RFC 3339 millisecond precision on all timestamps (`"time"` field and `.time()`) — `Rfc3339` omits sub-seconds when zero, violating the spec
+- [x] Enforce RFC 3339 millisecond precision on all timestamps (`"time"` field and `.time()`) — `Rfc3339` omits sub-seconds when zero, violating the spec
 - [x] Fix `dur` truncation: `as_millis()` returns `u128`; cast to `u64` silently overflows for extreme durations — use saturating conversion
 - [ ] Add `proptest` as a `dev-dependency` and write property tests for the JSON encoder:
   - Arbitrary `(key, value)` string pairs → emitted line is valid JSON and value round-trips exactly
