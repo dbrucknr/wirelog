@@ -2,18 +2,18 @@
 
 ## Phase 1 — Core (MVP)
 
-- [ ] Define `Level` enum (`Trace`, `Debug`, `Info`, `Warn`, `Error`, `Fatal`, `Panic`)
-- [ ] Define `Event` struct with owned `Vec<u8>` buffer and enabled/disabled flag
-- [ ] Implement scalar field methods on `Event`: `.str()`, `.int()`, `.uint()`, `.float()`, `.bool()`
-- [ ] Implement terminal methods: `.msg()`, `.send()`
-- [ ] Define `Logger` struct with sink (`Arc<Mutex<dyn Write + Send>>`) and minimum level
-- [ ] Implement level shorthand methods on `Logger`: `.info()`, `.warn()`, `.error()`, etc.
-- [ ] Auto-append `"time"` (RFC 3339) and `"level"` fields on every event flush
-- [ ] Disabled event fast-path: level below minimum returns a no-op `Event`
-- [ ] Implement `.err(e)` field method
-- [ ] Implement `.dur(key, val)` and `.time(key, val)` field methods
-- [ ] Implement `fatal()` (flush + `process::exit(1)`) and `panic()` (flush + `panic!()`)
-- [ ] Write basic unit tests: field encoding, JSON validity, level filtering
+- [x] Define `Level` enum (`Trace`, `Debug`, `Info`, `Warn`, `Error`, `Fatal`, `Panic`)
+- [x] Define `Event` struct with owned `Vec<u8>` buffer and enabled/disabled flag
+- [x] Implement scalar field methods on `Event`: `.str()`, `.int()`, `.uint()`, `.float()`, `.bool()`
+- [x] Implement terminal methods: `.msg()`, `.send()`
+- [x] Define `Logger` struct with sink (`Arc<Mutex<dyn Write + Send>>`) and minimum level
+- [x] Implement level shorthand methods on `Logger`: `.info()`, `.warn()`, `.error()`, etc.
+- [x] Auto-append `"time"` (RFC 3339) and `"level"` fields on every event flush
+- [x] Disabled event fast-path: level below minimum returns a no-op `Event`
+- [x] Implement `.err(e)` field method
+- [x] Implement `.dur(key, val)` and `.time(key, val)` field methods
+- [x] Implement `fatal()` (flush + `process::exit(1)`) and `panic()` (flush + `panic!()`)
+- [x] Write basic unit tests: field encoding, JSON validity, level filtering
 
 ## Phase 2 — Subloggers & context
 
