@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::{Event, Level};
 
+/// A structured JSON logger. Generic over `W: Write + Send` to avoid vtable overhead on the
+/// write path. Use `Logger<Box<dyn Write + Send>>` if you need a type-erased logger.
 pub struct Logger<W> {
     writer: Arc<Mutex<W>>,
     level: Level,

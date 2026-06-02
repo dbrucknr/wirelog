@@ -5,6 +5,9 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::Level;
 
+/// A single log event. Returned by [`Logger`] level methods and consumed by `.msg()` or
+/// `.send()`. When the logger's minimum level filters this event out, all field methods are
+/// no-ops and `.msg()` / `.send()` write nothing.
 pub struct Event<W> {
     buf: Vec<u8>,
     writer: Option<Arc<Mutex<W>>>,

@@ -52,6 +52,7 @@
 - Buffer reuse strategy TBD: either `thread_local!` pool or per-`Logger` pool
 - No `format!` / `to_string` calls in field methods — write directly to the buffer
 - Benchmark target: competitive with `tracing` + `tracing-subscriber` JSON layer
+- Static dispatch: `Logger<W>` and `Event<W>` are generic over `W: Write + Send + 'static`; no vtable on the write path, allowing the compiler to inline writes for known sink types (e.g. `Stdout`, `File`). Users who need type erasure can use `Logger<Box<dyn Write + Send>>`.
 
 ## Level filtering
 
