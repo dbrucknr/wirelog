@@ -94,14 +94,18 @@ mod tests {
     #[test]
     fn dur_field() {
         let (log, buf) = make_logger();
-        log.info().dur("latency", std::time::Duration::from_millis(42)).msg("ok");
+        log.info()
+            .dur("latency", std::time::Duration::from_millis(42))
+            .msg("ok");
         assert_eq!(parse(&buf)["latency"], 42);
     }
 
     #[test]
     fn time_field() {
         let (log, buf) = make_logger();
-        log.info().time("at", std::time::SystemTime::UNIX_EPOCH).msg("ok");
+        log.info()
+            .time("at", std::time::SystemTime::UNIX_EPOCH)
+            .msg("ok");
         let v = parse(&buf);
         assert_eq!(v["at"], "1970-01-01T00:00:00Z");
     }
@@ -117,7 +121,8 @@ mod tests {
     #[test]
     fn string_escaping() {
         let (log, buf) = make_logger();
-        let original = "newline\nnull\ttab\"quote\\backslash\rreturn\x08backspace\x0cformfeed\x01ctrl";
+        let original =
+            "newline\nnull\ttab\"quote\\backslash\rreturn\x08backspace\x0cformfeed\x01ctrl";
         log.info().str("msg", original).msg("ok");
         assert_eq!(parse(&buf)["msg"], original);
     }
@@ -135,7 +140,10 @@ mod tests {
         let (log, buf) = make_logger();
         log.info().str("k", "v").send();
         let v = parse(&buf);
-        assert!(v["message"].is_null(), "send() must not emit a message field");
+        assert!(
+            v["message"].is_null(),
+            "send() must not emit a message field"
+        );
     }
 
     #[test]
@@ -146,7 +154,10 @@ mod tests {
             .str("dropped", "yes")
             .bool("flag", true)
             .msg("should not appear");
-        assert!(buf.lock().unwrap().is_empty(), "debug event must be suppressed");
+        assert!(
+            buf.lock().unwrap().is_empty(),
+            "debug event must be suppressed"
+        );
     }
 
     #[test]
@@ -229,7 +240,10 @@ mod tests {
         let line = std::str::from_utf8(&raw).unwrap();
         let ctx_pos = line.find("\"ctx\"").unwrap();
         let evt_pos = line.find("\"evt\"").unwrap();
-        assert!(ctx_pos < evt_pos, "context fields must precede event fields");
+        assert!(
+            ctx_pos < evt_pos,
+            "context fields must precede event fields"
+        );
     }
 
     #[test]
@@ -241,7 +255,10 @@ mod tests {
         let line = std::str::from_utf8(&raw).unwrap();
         let level_pos = line.find("\"level\"").unwrap();
         let ctx_pos = line.find("\"ctx\"").unwrap();
-        assert!(level_pos < ctx_pos, "level field must precede context fields");
+        assert!(
+            level_pos < ctx_pos,
+            "level field must precede context fields"
+        );
     }
 
     #[test]
@@ -252,7 +269,10 @@ mod tests {
         buf.lock().unwrap().clear();
         log.info().msg("from parent");
         let v = parse(&buf);
-        assert!(v["service"].is_null(), "parent must not inherit sublogger context");
+        assert!(
+            v["service"].is_null(),
+            "parent must not inherit sublogger context"
+        );
     }
 
     #[test]
@@ -272,7 +292,10 @@ mod tests {
         let log = log.level(Level::Warn);
         let sub = log.with().str("service", "auth").logger();
         sub.debug().msg("filtered");
-        assert!(buf.lock().unwrap().is_empty(), "sublogger must inherit level filter");
+        assert!(
+            buf.lock().unwrap().is_empty(),
+            "sublogger must inherit level filter"
+        );
     }
 
     #[test]

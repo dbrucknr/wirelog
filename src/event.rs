@@ -21,11 +21,17 @@ impl<W: Write + Send + 'static> Event<W> {
         buf.extend_from_slice(level.as_str().as_bytes());
         buf.push(b'"');
         buf.extend_from_slice(prefix);
-        Self { buf, writer: Some(writer) }
+        Self {
+            buf,
+            writer: Some(writer),
+        }
     }
 
     pub(crate) fn disabled() -> Self {
-        Self { buf: Vec::new(), writer: None }
+        Self {
+            buf: Vec::new(),
+            writer: None,
+        }
     }
 
     pub fn str(mut self, key: &str, val: &str) -> Self {

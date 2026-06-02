@@ -3,9 +3,9 @@ use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
+use crate::Level;
 use crate::encode;
 use crate::logger::Logger;
-use crate::Level;
 
 /// A builder for attaching permanent fields to a [`Logger`]. Created by [`Logger::with`].
 /// Call [`Context::logger`] to produce a sublogger that prepends these fields to every event.
@@ -51,7 +51,8 @@ impl<W: Write + Send + 'static> Context<W> {
 
     pub fn bool(mut self, key: &str, val: bool) -> Self {
         encode::append_key(&mut self.buf, key);
-        self.buf.extend_from_slice(if val { b"true" } else { b"false" });
+        self.buf
+            .extend_from_slice(if val { b"true" } else { b"false" });
         self
     }
 
@@ -62,7 +63,8 @@ impl<W: Write + Send + 'static> Context<W> {
     pub fn dur(mut self, key: &str, val: std::time::Duration) -> Self {
         encode::append_key(&mut self.buf, key);
         let mut b = itoa::Buffer::new();
-        self.buf.extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
+        self.buf
+            .extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
         self
     }
 

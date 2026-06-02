@@ -22,7 +22,11 @@ impl<W: Write + Send + 'static> Logger<W> {
     }
 
     pub(crate) fn from_context(writer: Arc<Mutex<W>>, level: Level, prefix: Vec<u8>) -> Self {
-        Self { writer, level, prefix }
+        Self {
+            writer,
+            level,
+            prefix,
+        }
     }
 
     pub fn level(mut self, level: Level) -> Self {
@@ -43,13 +47,27 @@ impl<W: Write + Send + 'static> Logger<W> {
         }
     }
 
-    pub fn trace(&self) -> Event<W> { self.event(Level::Trace) }
-    pub fn debug(&self) -> Event<W> { self.event(Level::Debug) }
-    pub fn info(&self)  -> Event<W> { self.event(Level::Info)  }
-    pub fn warn(&self)  -> Event<W> { self.event(Level::Warn)  }
-    pub fn error(&self) -> Event<W> { self.event(Level::Error) }
-    pub fn fatal(&self) -> Event<W> { self.event(Level::Fatal) }
-    pub fn panic(&self) -> Event<W> { self.event(Level::Panic) }
+    pub fn trace(&self) -> Event<W> {
+        self.event(Level::Trace)
+    }
+    pub fn debug(&self) -> Event<W> {
+        self.event(Level::Debug)
+    }
+    pub fn info(&self) -> Event<W> {
+        self.event(Level::Info)
+    }
+    pub fn warn(&self) -> Event<W> {
+        self.event(Level::Warn)
+    }
+    pub fn error(&self) -> Event<W> {
+        self.event(Level::Error)
+    }
+    pub fn fatal(&self) -> Event<W> {
+        self.event(Level::Fatal)
+    }
+    pub fn panic(&self) -> Event<W> {
+        self.event(Level::Panic)
+    }
 }
 
 impl<W: Write + Send + 'static> Clone for Logger<W> {
