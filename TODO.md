@@ -12,7 +12,7 @@
 - [x] Disabled event fast-path: level below minimum returns a no-op `Event`
 - [x] Implement `.err(e)` field method
 - [x] Implement `.dur(key, val)` and `.time(key, val)` field methods
-- [x] Implement `fatal()` (flush + `process::exit(1)`) and `panic()` (flush + `panic!()`)
+- [x] Implement `fatal()` and `panic()` as pure level designators (no exit/panic — caller's responsibility)
 - [x] Write basic unit tests: field encoding, JSON validity, level filtering
 
 ## Phase 2 — Subloggers & context

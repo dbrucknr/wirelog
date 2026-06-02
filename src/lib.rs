@@ -187,17 +187,17 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "wirelog: fatal exit")]
-    fn fatal_level_exits() {
-        let (log, _buf) = make_logger();
-        log.fatal().msg("fatal");
+    fn fatal_level() {
+        let (log, buf) = make_logger();
+        log.fatal().msg("fatal event");
+        assert_eq!(parse(&buf)["level"], "fatal");
     }
 
     #[test]
-    #[should_panic(expected = "wirelog: panic-level event")]
-    fn panic_level_panics() {
-        let (log, _buf) = make_logger();
-        log.panic().msg("panic");
+    fn panic_level() {
+        let (log, buf) = make_logger();
+        log.panic().msg("panic event");
+        assert_eq!(parse(&buf)["level"], "panic");
     }
 
     #[test]

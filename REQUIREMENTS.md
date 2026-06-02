@@ -64,8 +64,7 @@
 ## Error handling
 
 - Sink write errors are silently swallowed (same as zerolog) — logging must not panic or propagate errors into application code
-- `fatal()` events flush then call `std::process::exit(1)`
-- `panic()` events flush then call `panic!()`
+- `fatal()` and `panic()` are pure level designators: they write `"level":"fatal"` / `"level":"panic"` to the JSON output and return normally. The caller decides what to do next (exit, panic, alert, etc.). A library crate must never control process lifetime on behalf of its caller.
 
 ## Non-blocking writer
 

@@ -4,9 +4,9 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use crate::encode;
-use crate::Level;
+use crate::level::Level;
 
-/// A single log event. Returned by [`Logger`] level methods and consumed by `.msg()` or
+/// A single log event. Returned by [`Logger`](crate::Logger) level methods and consumed by `.msg()` or
 /// `.send()`. When the logger's minimum level filters this event out, all field methods are
 /// no-ops and `.msg()` / `.send()` write nothing.
 pub struct Event<W> {
@@ -22,11 +22,19 @@ impl<W: Write + Send + 'static> Event<W> {
         buf.extend_from_slice(level.as_str().as_bytes());
         buf.push(b'"');
         buf.extend_from_slice(prefix);
-        Self { buf, writer: Some(writer), level }
+        Self {
+            buf,
+            writer: Some(writer),
+            level,
+        }
     }
 
     pub(crate) fn disabled() -> Self {
-        Self { buf: Vec::new(), writer: None, level: Level::Trace }
+        Self {
+            buf: Vec::new(),
+            writer: None,
+            level: Level::Trace,
+        }
     }
 
     pub fn str(mut self, key: &str, val: &str) -> Self {
@@ -67,7 +75,8 @@ impl<W: Write + Send + 'static> Event<W> {
     pub fn bool(mut self, key: &str, val: bool) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
-            self.buf.extend_from_slice(if val { b"true" } else { b"false" });
+            self.buf
+                .extend_from_slice(if val { b"true" } else { b"false" });
         }
         self
     }
@@ -80,7 +89,8 @@ impl<W: Write + Send + 'static> Event<W> {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
             let mut b = itoa::Buffer::new();
-            self.buf.extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
+            self.buf
+                .extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
         }
         self
     }
@@ -116,18 +126,6 @@ impl<W: Write + Send + 'static> Event<W> {
             let mut w = writer.lock().unwrap();
             let _ = w.write_all(&self.buf);
             let _ = w.flush();
-            drop(w);
-
-            match self.level {
-                Level::Fatal => {
-                    #[cfg(not(test))]
-                    std::process::exit(1);
-                    #[cfg(test)]
-                    panic!("wirelog: fatal exit");
-                }
-                Level::Panic => panic!("wirelog: panic-level event"),
-                _ => {}
-            }
         }
     }
 }
