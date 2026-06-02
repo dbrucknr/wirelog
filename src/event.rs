@@ -17,11 +17,19 @@ impl Event {
         buf.extend_from_slice(b"{\"level\":\"");
         buf.extend_from_slice(level.as_str().as_bytes());
         buf.push(b'"');
-        Self { buf, writer: Some(writer), level }
+        Self {
+            buf,
+            writer: Some(writer),
+            level,
+        }
     }
 
     pub(crate) fn disabled() -> Self {
-        Self { buf: Vec::new(), writer: None, level: Level::Trace }
+        Self {
+            buf: Vec::new(),
+            writer: None,
+            level: Level::Trace,
+        }
     }
 
     pub fn str(mut self, key: &str, val: &str) -> Self {
@@ -62,7 +70,8 @@ impl Event {
     pub fn bool(mut self, key: &str, val: bool) -> Self {
         if self.writer.is_some() {
             self.append_key(key);
-            self.buf.extend_from_slice(if val { b"true" } else { b"false" });
+            self.buf
+                .extend_from_slice(if val { b"true" } else { b"false" });
         }
         self
     }
@@ -75,7 +84,8 @@ impl Event {
         if self.writer.is_some() {
             self.append_key(key);
             let mut b = itoa::Buffer::new();
-            self.buf.extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
+            self.buf
+                .extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
         }
         self
     }
@@ -108,10 +118,18 @@ impl Event {
             let _ = OffsetDateTime::now_utc().format_into(&mut self.buf, &Rfc3339);
             self.buf.extend_from_slice(b"\"}\n");
 
-            let _ = writer.lock().unwrap().write_all(&self.buf);
+            let mut w = writer.lock().unwrap();
+            let _ = w.write_all(&self.buf);
+            let _ = w.flush();
+            drop(w);
 
             match self.level {
-                Level::Fatal => std::process::exit(1),
+                Level::Fatal => {
+                    #[cfg(not(test))]
+                    std::process::exit(1);
+                    #[cfg(test)]
+                    panic!("wirelog: fatal exit");
+                }
                 Level::Panic => panic!("wirelog: panic-level event"),
                 _ => {}
             }
@@ -135,13 +153,13 @@ impl Event {
 fn write_escaped(buf: &mut Vec<u8>, s: &str) {
     for byte in s.bytes() {
         match byte {
-            b'"'  => buf.extend_from_slice(b"\\\""),
+            b'"' => buf.extend_from_slice(b"\\\""),
             b'\\' => buf.extend_from_slice(b"\\\\"),
             b'\n' => buf.extend_from_slice(b"\\n"),
             b'\r' => buf.extend_from_slice(b"\\r"),
             b'\t' => buf.extend_from_slice(b"\\t"),
-            0x08  => buf.extend_from_slice(b"\\b"),
-            0x0c  => buf.extend_from_slice(b"\\f"),
+            0x08 => buf.extend_from_slice(b"\\b"),
+            0x0c => buf.extend_from_slice(b"\\f"),
             b if b < 0x20 => {
                 buf.extend_from_slice(b"\\u00");
                 buf.push(b"0123456789abcdef"[(b >> 4) as usize]);

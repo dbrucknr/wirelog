@@ -114,9 +114,9 @@ mod tests {
     #[test]
     fn string_escaping() {
         let (log, buf) = make_logger();
-        log.info().str("msg", "line1\nline2\t\"quoted\"").msg("ok");
-        let v = parse(&buf);
-        assert_eq!(v["msg"], "line1\nline2\t\"quoted\"");
+        let original = "newline\nnull\ttab\"quote\\backslash\rreturn\x08backspace\x0cformfeed\x01ctrl";
+        log.info().str("msg", original).msg("ok");
+        assert_eq!(parse(&buf)["msg"], original);
     }
 
     #[test]
@@ -139,7 +139,10 @@ mod tests {
     fn level_filtering_disabled_event() {
         let (log, buf) = make_logger();
         let log = log.level(Level::Warn);
-        log.debug().str("dropped", "yes").msg("should not appear");
+        log.debug()
+            .str("dropped", "yes")
+            .bool("flag", true)
+            .msg("should not appear");
         assert!(buf.lock().unwrap().is_empty(), "debug event must be suppressed");
     }
 
@@ -157,6 +160,41 @@ mod tests {
         let log2 = log.clone();
         log2.info().msg("from clone");
         assert_eq!(parse(&buf)["level"], "info");
+    }
+
+    #[test]
+    fn bool_false_field() {
+        let (log, buf) = make_logger();
+        log.info().bool("active", false).msg("ok");
+        assert_eq!(parse(&buf)["active"], false);
+    }
+
+    #[test]
+    fn trace_level() {
+        let (log, buf) = make_logger();
+        log.trace().msg("trace event");
+        assert_eq!(parse(&buf)["level"], "trace");
+    }
+
+    #[test]
+    fn debug_level() {
+        let (log, buf) = make_logger();
+        log.debug().msg("debug event");
+        assert_eq!(parse(&buf)["level"], "debug");
+    }
+
+    #[test]
+    #[should_panic(expected = "wirelog: fatal exit")]
+    fn fatal_level_exits() {
+        let (log, _buf) = make_logger();
+        log.fatal().msg("fatal");
+    }
+
+    #[test]
+    #[should_panic(expected = "wirelog: panic-level event")]
+    fn panic_level_panics() {
+        let (log, _buf) = make_logger();
+        log.panic().msg("panic");
     }
 
     #[test]
