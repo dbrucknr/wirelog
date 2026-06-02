@@ -17,12 +17,12 @@
 
 ## Phase 2 — Subloggers & context
 
-- [ ] Define `Context` builder type
-- [ ] Implement `Logger::with()` returning `Context`
-- [ ] Implement field methods on `Context` (mirrors `Event`)
-- [ ] Implement `Context::logger()` returning a new `Logger` with pre-encoded context fields
-- [ ] Ensure context fields prepend correctly without per-event allocation
-- [ ] Tests: sublogger field inheritance, context fields appear before event fields
+- [x] Define `Context` builder type
+- [x] Implement `Logger::with()` returning `Context`
+- [x] Implement field methods on `Context` (mirrors `Event`)
+- [x] Implement `Context::logger()` returning a new `Logger` with pre-encoded context fields
+- [x] Ensure context fields prepend correctly without per-event allocation
+- [x] Tests: sublogger field inheritance, context fields appear before event fields
 
 ## Phase 3 — Performance
 

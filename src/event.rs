@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
+use crate::encode;
 use crate::Level;
 
 /// A single log event. Returned by [`Logger`] level methods and consumed by `.msg()` or
@@ -15,11 +16,12 @@ pub struct Event<W> {
 }
 
 impl<W: Write + Send + 'static> Event<W> {
-    pub(crate) fn new(writer: Arc<Mutex<W>>, level: Level) -> Self {
-        let mut buf = Vec::with_capacity(256);
+    pub(crate) fn new(writer: Arc<Mutex<W>>, level: Level, prefix: &[u8]) -> Self {
+        let mut buf = Vec::with_capacity(256 + prefix.len());
         buf.extend_from_slice(b"{\"level\":\"");
         buf.extend_from_slice(level.as_str().as_bytes());
         buf.push(b'"');
+        buf.extend_from_slice(prefix);
         Self { buf, writer: Some(writer), level }
     }
 
@@ -29,15 +31,15 @@ impl<W: Write + Send + 'static> Event<W> {
 
     pub fn str(mut self, key: &str, val: &str) -> Self {
         if self.writer.is_some() {
-            self.append_key(key);
-            self.append_str_val(val);
+            encode::append_key(&mut self.buf, key);
+            encode::append_str_val(&mut self.buf, val);
         }
         self
     }
 
     pub fn int(mut self, key: &str, val: i64) -> Self {
         if self.writer.is_some() {
-            self.append_key(key);
+            encode::append_key(&mut self.buf, key);
             let mut b = itoa::Buffer::new();
             self.buf.extend_from_slice(b.format(val).as_bytes());
         }
@@ -46,7 +48,7 @@ impl<W: Write + Send + 'static> Event<W> {
 
     pub fn uint(mut self, key: &str, val: u64) -> Self {
         if self.writer.is_some() {
-            self.append_key(key);
+            encode::append_key(&mut self.buf, key);
             let mut b = itoa::Buffer::new();
             self.buf.extend_from_slice(b.format(val).as_bytes());
         }
@@ -55,7 +57,7 @@ impl<W: Write + Send + 'static> Event<W> {
 
     pub fn float(mut self, key: &str, val: f64) -> Self {
         if self.writer.is_some() {
-            self.append_key(key);
+            encode::append_key(&mut self.buf, key);
             let mut b = ryu::Buffer::new();
             self.buf.extend_from_slice(b.format(val).as_bytes());
         }
@@ -64,7 +66,7 @@ impl<W: Write + Send + 'static> Event<W> {
 
     pub fn bool(mut self, key: &str, val: bool) -> Self {
         if self.writer.is_some() {
-            self.append_key(key);
+            encode::append_key(&mut self.buf, key);
             self.buf.extend_from_slice(if val { b"true" } else { b"false" });
         }
         self
@@ -76,7 +78,7 @@ impl<W: Write + Send + 'static> Event<W> {
 
     pub fn dur(mut self, key: &str, val: std::time::Duration) -> Self {
         if self.writer.is_some() {
-            self.append_key(key);
+            encode::append_key(&mut self.buf, key);
             let mut b = itoa::Buffer::new();
             self.buf.extend_from_slice(b.format(val.as_millis() as u64).as_bytes());
         }
@@ -85,7 +87,7 @@ impl<W: Write + Send + 'static> Event<W> {
 
     pub fn time(mut self, key: &str, val: std::time::SystemTime) -> Self {
         if self.writer.is_some() {
-            self.append_key(key);
+            encode::append_key(&mut self.buf, key);
             self.buf.push(b'"');
             let _ = OffsetDateTime::from(val).format_into(&mut self.buf, &Rfc3339);
             self.buf.push(b'"');
@@ -104,8 +106,8 @@ impl<W: Write + Send + 'static> Event<W> {
     fn flush(mut self, msg: Option<&str>) {
         if let Some(writer) = self.writer.take() {
             if let Some(m) = msg {
-                self.append_key("message");
-                self.append_str_val(m);
+                encode::append_key(&mut self.buf, "message");
+                encode::append_str_val(&mut self.buf, m);
             }
             self.buf.extend_from_slice(b",\"time\":\"");
             let _ = OffsetDateTime::now_utc().format_into(&mut self.buf, &Rfc3339);
@@ -126,39 +128,6 @@ impl<W: Write + Send + 'static> Event<W> {
                 Level::Panic => panic!("wirelog: panic-level event"),
                 _ => {}
             }
-        }
-    }
-
-    fn append_key(&mut self, key: &str) {
-        self.buf.push(b',');
-        self.buf.push(b'"');
-        write_escaped(&mut self.buf, key);
-        self.buf.extend_from_slice(b"\":");
-    }
-
-    fn append_str_val(&mut self, val: &str) {
-        self.buf.push(b'"');
-        write_escaped(&mut self.buf, val);
-        self.buf.push(b'"');
-    }
-}
-
-fn write_escaped(buf: &mut Vec<u8>, s: &str) {
-    for byte in s.bytes() {
-        match byte {
-            b'"'  => buf.extend_from_slice(b"\\\""),
-            b'\\' => buf.extend_from_slice(b"\\\\"),
-            b'\n' => buf.extend_from_slice(b"\\n"),
-            b'\r' => buf.extend_from_slice(b"\\r"),
-            b'\t' => buf.extend_from_slice(b"\\t"),
-            0x08  => buf.extend_from_slice(b"\\b"),
-            0x0c  => buf.extend_from_slice(b"\\f"),
-            b if b < 0x20 => {
-                buf.extend_from_slice(b"\\u00");
-                buf.push(b"0123456789abcdef"[(b >> 4) as usize]);
-                buf.push(b"0123456789abcdef"[(b & 0xf) as usize]);
-            }
-            _ => buf.push(byte),
         }
     }
 }

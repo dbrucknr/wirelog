@@ -1,7 +1,10 @@
+mod context;
+mod encode;
 mod event;
 mod level;
 mod logger;
 
+pub use context::Context;
 pub use event::Event;
 pub use level::Level;
 pub use logger::Logger;
@@ -205,5 +208,112 @@ mod tests {
         let line = std::str::from_utf8(&raw).unwrap();
         assert!(line.ends_with('\n'), "output must be newline-terminated");
         serde_json::from_str::<Value>(line.trim_end()).expect("must be valid JSON");
+    }
+
+    // --- Phase 2: context & subloggers ---
+
+    #[test]
+    fn context_fields_appear_in_sublogger_events() {
+        let (log, buf) = make_logger();
+        let sub = log.with().str("service", "auth").logger();
+        sub.info().msg("ok");
+        assert_eq!(parse(&buf)["service"], "auth");
+    }
+
+    #[test]
+    fn context_fields_precede_event_fields() {
+        let (log, buf) = make_logger();
+        let sub = log.with().str("ctx", "c").logger();
+        sub.info().str("evt", "e").msg("ok");
+        let raw = buf.lock().unwrap();
+        let line = std::str::from_utf8(&raw).unwrap();
+        let ctx_pos = line.find("\"ctx\"").unwrap();
+        let evt_pos = line.find("\"evt\"").unwrap();
+        assert!(ctx_pos < evt_pos, "context fields must precede event fields");
+    }
+
+    #[test]
+    fn context_fields_precede_level_field() {
+        let (log, buf) = make_logger();
+        let sub = log.with().str("ctx", "c").logger();
+        sub.info().msg("ok");
+        let raw = buf.lock().unwrap();
+        let line = std::str::from_utf8(&raw).unwrap();
+        let level_pos = line.find("\"level\"").unwrap();
+        let ctx_pos = line.find("\"ctx\"").unwrap();
+        assert!(level_pos < ctx_pos, "level field must precede context fields");
+    }
+
+    #[test]
+    fn parent_logger_unaffected_by_sublogger() {
+        let (log, buf) = make_logger();
+        let sub = log.with().str("service", "auth").logger();
+        sub.info().msg("from sub");
+        buf.lock().unwrap().clear();
+        log.info().msg("from parent");
+        let v = parse(&buf);
+        assert!(v["service"].is_null(), "parent must not inherit sublogger context");
+    }
+
+    #[test]
+    fn nested_contexts_accumulate_fields() {
+        let (log, buf) = make_logger();
+        let sub1 = log.with().str("a", "1").logger();
+        let sub2 = sub1.with().str("b", "2").logger();
+        sub2.info().msg("ok");
+        let v = parse(&buf);
+        assert_eq!(v["a"], "1");
+        assert_eq!(v["b"], "2");
+    }
+
+    #[test]
+    fn context_level_filtering_inherited() {
+        let (log, buf) = make_logger();
+        let log = log.level(Level::Warn);
+        let sub = log.with().str("service", "auth").logger();
+        sub.debug().msg("filtered");
+        assert!(buf.lock().unwrap().is_empty(), "sublogger must inherit level filter");
+    }
+
+    #[test]
+    fn context_all_field_types() {
+        let (log, buf) = make_logger();
+        let sub = log
+            .with()
+            .str("s", "v")
+            .int("i", -1)
+            .uint("u", 2)
+            .float("f", 1.5)
+            .bool("b", true)
+            .dur("d", std::time::Duration::from_millis(10))
+            .time("t", std::time::SystemTime::UNIX_EPOCH)
+            .logger();
+        sub.info().msg("ok");
+        let v = parse(&buf);
+        assert_eq!(v["s"], "v");
+        assert_eq!(v["i"], -1);
+        assert_eq!(v["u"], 2);
+        assert_eq!(v["f"], 1.5);
+        assert_eq!(v["b"], true);
+        assert_eq!(v["d"], 10);
+        assert_eq!(v["t"], "1970-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn context_err_field() {
+        let (log, buf) = make_logger();
+        let e = std::io::Error::new(std::io::ErrorKind::Other, "context error");
+        let sub = log.with().err(&e).logger();
+        sub.info().msg("ok");
+        assert_eq!(parse(&buf)["error"], "context error");
+    }
+
+    #[test]
+    fn sublogger_is_clone() {
+        let (log, buf) = make_logger();
+        let sub = log.with().str("svc", "api").logger();
+        let sub2 = sub.clone();
+        sub2.info().msg("from clone");
+        assert_eq!(parse(&buf)["svc"], "api");
     }
 }

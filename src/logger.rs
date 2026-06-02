@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 
+use crate::context::Context;
 use crate::{Event, Level};
 
 /// A structured JSON logger. Generic over `W: Write + Send` to avoid vtable overhead on the
@@ -8,6 +9,7 @@ use crate::{Event, Level};
 pub struct Logger<W> {
     writer: Arc<Mutex<W>>,
     level: Level,
+    prefix: Vec<u8>,
 }
 
 impl<W: Write + Send + 'static> Logger<W> {
@@ -15,7 +17,12 @@ impl<W: Write + Send + 'static> Logger<W> {
         Self {
             writer: Arc::new(Mutex::new(writer)),
             level: Level::Trace,
+            prefix: Vec::new(),
         }
+    }
+
+    pub(crate) fn from_context(writer: Arc<Mutex<W>>, level: Level, prefix: Vec<u8>) -> Self {
+        Self { writer, level, prefix }
     }
 
     pub fn level(mut self, level: Level) -> Self {
@@ -23,11 +30,16 @@ impl<W: Write + Send + 'static> Logger<W> {
         self
     }
 
+    /// Returns a [`Context`] builder for attaching permanent fields to a sublogger.
+    pub fn with(&self) -> Context<W> {
+        Context::new(Arc::clone(&self.writer), self.level, &self.prefix)
+    }
+
     fn event(&self, level: Level) -> Event<W> {
         if level < self.level {
             Event::disabled()
         } else {
-            Event::new(Arc::clone(&self.writer), level)
+            Event::new(Arc::clone(&self.writer), level, &self.prefix)
         }
     }
 
@@ -45,6 +57,7 @@ impl<W: Write + Send + 'static> Clone for Logger<W> {
         Self {
             writer: Arc::clone(&self.writer),
             level: self.level,
+            prefix: self.prefix.clone(),
         }
     }
 }
