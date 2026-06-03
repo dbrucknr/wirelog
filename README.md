@@ -31,6 +31,8 @@ things.
 wirelog = "0.1"
 ```
 
+Requires Rust 1.85 or later (edition 2024).
+
 ---
 
 ## Quick start
@@ -247,8 +249,8 @@ M-series (arm64), writing to `io::sink()` to isolate encoding cost from I/O.
 | | wirelog | tracing + JSON subscriber | ratio |
 |---|---|---|---|
 | disabled event (runtime filter) | 2.6 ns | 0.3 ns | — |
-| single field | 166 ns | 693 ns | **~4× faster** |
-| ten fields | 285 ns | 1,181 ns | **~4× faster** |
+| single field | 170 ns | 693 ns | **~4× faster** |
+| ten fields | 294 ns | 1,181 ns | **~4× faster** |
 
 The hot path is allocation-free in steady state — a thread-local buffer is reused
 across events. The dominant cost is `Mutex` acquisition (~20 ns lock/unlock) plus
@@ -274,7 +276,7 @@ based on ergonomics, not performance.
 | API model | per-event builder | macros + spans |
 | Async / span support | — | ✓ |
 | Subscriber ecosystem | — | large |
-| Active logging overhead | ~166 ns / event (blocking) | ~693 ns / event |
+| Active logging overhead | ~170 ns / event | ~693 ns / event |
 | Compile-time level filtering | ✓ (feature flags) | ✓ (feature flags) |
 | Contextual fields | ✓ (subloggers) | ✓ (spans) |
 | `log` crate compatibility | planned | ✓ |

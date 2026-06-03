@@ -1,9 +1,10 @@
 #![warn(missing_docs)]
+#![deny(unsafe_code)]
 //! A structured JSON logger with [zerolog](https://github.com/rs/zerolog)-inspired ergonomics.
 //!
 //! Each log call produces a single newline-terminated JSON object written to any
 //! [`std::io::Write`] sink. Fields are typed and appended via a fluent builder; the
-//! event is flushed only when `.msg()` or `.send()` is called.
+//! event is written only when `.msg()` or `.send()` is called.
 //!
 //! # Dispatch strategy
 //!

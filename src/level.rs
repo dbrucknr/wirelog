@@ -3,6 +3,10 @@
 /// Levels are ordered from least to most severe: `Trace < Debug < Info < Warn < Error < Fatal < Panic`.
 /// Use [`Logger::level`](crate::Logger::level) to set a runtime minimum; events below it become no-ops.
 /// Use Cargo feature flags (`level-debug`, `level-info`, etc.) to eliminate levels at compile time.
+///
+/// This enum is `#[non_exhaustive]` — match arms must include a wildcard to remain compatible
+/// with future variants.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Level {
     /// Fine-grained diagnostic information. Typically enabled only during development.
@@ -32,5 +36,11 @@ impl Level {
             Level::Fatal => "fatal",
             Level::Panic => "panic",
         }
+    }
+}
+
+impl std::fmt::Display for Level {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }

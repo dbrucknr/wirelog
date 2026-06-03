@@ -19,6 +19,7 @@ pub struct Event<W> {
 }
 
 impl<W: Write + Send + 'static> Event<W> {
+    #[cfg_attr(feature = "level-off", allow(dead_code))]
     pub(crate) fn new(writer: Arc<Mutex<W>>, level: Level, prefix: &[u8]) -> Self {
         let mut buf = BUF.with(|cell| std::mem::take(&mut *cell.borrow_mut()));
         buf.clear();
@@ -122,12 +123,12 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
-    /// Appends a `"message"` field and flushes the event to the writer.
+    /// Appends a `"message"` field and writes the complete event to the writer.
     pub fn msg(self, msg: &str) {
         self.flush(Some(msg));
     }
 
-    /// Flushes the event to the writer without a `"message"` field.
+    /// Writes the complete event to the writer without a `"message"` field.
     pub fn send(self) {
         self.flush(None);
     }

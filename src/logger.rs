@@ -48,6 +48,7 @@ impl<W: Write + Send + 'static> Logger<W> {
         Context::new(Arc::clone(&self.writer), self.level, &self.prefix)
     }
 
+    #[cfg_attr(feature = "level-off", allow(dead_code))]
     fn event(&self, level: Level) -> Event<W> {
         if level < self.level {
             Event::disabled()
