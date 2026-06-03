@@ -29,7 +29,8 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --all-features -- -D warnings
+      - run: cargo clippy -- -D warnings
+      - run: cargo clippy --features level-debug -- -D warnings
 
   test:
     name: Test
@@ -38,7 +39,23 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --all-features
+      # Default: all 44 tests, full behavior coverage.
+      - run: cargo test
+      # Validates compile-time level gating without breaking the rest of the suite.
+      # level-debug only compiles out trace; everything else still runs.
+      - run: cargo test --features level-debug
+      # level-off compiles out everything — run only the dedicated test for it.
+      # Running the full suite with level-off would fail every test that expects log output.
+      - run: cargo test --features level-off -- compile_time_all_levels_disabled
+
+  test-beta:
+    name: Test (beta)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@beta
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test
 
   doc:
     name: Docs
@@ -47,6 +64,6 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo doc --no-deps --all-features
+      - run: cargo doc --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
