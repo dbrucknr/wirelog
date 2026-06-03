@@ -4,7 +4,8 @@ A structured JSON logger for Rust with [zerolog](https://github.com/rs/zerolog)-
 
 Every log call produces a single newline-terminated JSON object. Fields are typed
 and appended via a fluent builder; nothing is written until `.msg()` or `.send()`
-is called. The hot path is allocation-free in steady state.
+is called. The hot path is allocation-free in steady state. An optional non-blocking writer
+moves I/O off the calling thread entirely via a buffered background thread.
 
 ---
 
@@ -205,6 +206,62 @@ dominates and makes the dispatch overhead unmeasurable.
 
 ---
 
+## Non-blocking writer
+
+The `non-blocking` feature provides `NonBlocking<W>`, a `Write` adapter that
+buffers log lines in a bounded `mpsc` channel and drains them on a dedicated
+background thread. Log calls on the hot path become a channel send and never
+block on I/O.
+
+Enable in `Cargo.toml`:
+
+```toml
+[dependencies]
+wirelog = { version = "0.1", features = ["non-blocking"] }
+```
+
+Usage is identical to the blocking path — `NonBlocking<W>` is a drop-in sink
+for `Logger`:
+
+```rust
+use wirelog::{Logger, NonBlocking};
+
+// 1024 is the channel capacity: max log lines buffered between the caller
+// and the background thread. Tune to your burst profile.
+let nb = NonBlocking::new(std::io::stdout(), 1024);
+let logger = Logger::new(nb);
+
+logger.info().str("env", "production").msg("server started");
+```
+
+Subloggers, context fields, level filtering, and `AnyLogger` all work
+unchanged — the transport is transparent.
+
+### Overflow
+
+When the channel is full, log lines are silently dropped rather than blocking
+the caller. The total dropped since construction is available via `dropped()`:
+
+```rust
+let nb = NonBlocking::new(std::io::stderr(), 512);
+// ... after high-throughput section ...
+let n = nb.dropped();
+if n > 0 {
+    eprintln!("warning: {n} log lines dropped");
+}
+```
+
+Tune the capacity to match your expected burst size. A larger capacity uses
+more memory but reduces drops under load.
+
+### Shutdown
+
+Dropping a `Logger<NonBlocking<W>>` closes the channel sender and blocks until
+the background thread has drained all queued lines and flushed the underlying
+writer. No log lines are silently lost at program exit.
+
+---
+
 ## Performance
 
 Measured with [criterion](https://github.com/bheisler/criterion.rs) on Apple
@@ -217,9 +274,10 @@ M-series (arm64), writing to `io::sink()` to isolate encoding cost from I/O.
 | ten fields | 285 ns | 1,181 ns | **~4× faster** |
 
 The hot path is allocation-free in steady state — a thread-local buffer is reused
-across events. The dominant cost is `Mutex` acquisition (~160 ns), which bounds
-the active logging path. A non-blocking writer (`mpsc` channel + background thread)
-is planned for a future release and will reduce this substantially.
+across events. The dominant cost of the blocking path is `Mutex` acquisition
+(~160 ns). The `non-blocking` feature eliminates this from the calling thread:
+log calls become a channel send (~20–30 ns) and I/O is handled by a background
+thread.
 
 **Disabled event note:** tracing's 0.3 ns reflects its static callsite interest
 cache — after the first dispatch the check is a single atomic load. wirelog's
@@ -240,7 +298,7 @@ based on ergonomics, not performance.
 | API model | per-event builder | macros + spans |
 | Async / span support | — | ✓ |
 | Subscriber ecosystem | — | large |
-| Active logging overhead | ~166 ns / event | ~693 ns / event |
+| Active logging overhead | ~166 ns / event (blocking) | ~693 ns / event |
 | Compile-time level filtering | ✓ (feature flags) | ✓ (feature flags) |
 | Contextual fields | ✓ (subloggers) | ✓ (spans) |
 | `log` crate compatibility | planned | ✓ |

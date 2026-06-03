@@ -52,11 +52,11 @@
 
 ## Phase 5 — Non-blocking writer
 
-- [ ] Implement `NonBlocking<W>` writer adapter (optional feature `non-blocking`)
-  - [ ] `mpsc` channel (configurable capacity) + background writer thread
-  - [ ] Drop counter for overflow — exposed via a `dropped()` method
-  - [ ] `NonBlocking<W>` implements `std::io::Write` (drop-in sink for `Logger`)
-- [ ] Tests: non-blocking path under load, drop counting, clean shutdown on `Logger` drop
+- [x] Implement `NonBlocking<W>` writer adapter (optional feature `non-blocking`)
+  - [x] `mpsc` channel (configurable capacity) + background writer thread
+  - [x] Drop counter for overflow — exposed via a `dropped()` method
+  - [x] `NonBlocking<W>` implements `std::io::Write` (drop-in sink for `Logger`)
+- [x] Tests: non-blocking path under load, drop counting, clean shutdown on `Logger` drop
 
 ## Phase 6 — Polish & publish
 
