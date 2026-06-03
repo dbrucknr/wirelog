@@ -18,7 +18,6 @@ level-info   = []
 level-warn   = []
 level-error  = []
 level-off    = []
-non-blocking = []
 
 [dependencies]
 itoa = "1"
@@ -32,15 +31,6 @@ criterion = { version = "0.5", features = ["html_reports"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"] }
 
-[[example]]
-name = "non_blocking"
-required-features = ["non-blocking"]
-
 [[bench]]
 name = "logging"
 harness = false
-
-[[bench]]
-name = "non_blocking"
-harness = false
-required-features = ["non-blocking"]

@@ -88,15 +88,11 @@ mod encode;
 mod event;
 mod level;
 mod logger;
-#[cfg(feature = "non-blocking")]
-mod non_blocking;
 
 pub use context::Context;
 pub use event::Event;
 pub use level::Level;
 pub use logger::Logger;
-#[cfg(feature = "non-blocking")]
-pub use non_blocking::NonBlocking;
 
 /// Type-erased logger. A convenience alias for `Logger<Box<dyn std::io::Write + Send>>`.
 ///

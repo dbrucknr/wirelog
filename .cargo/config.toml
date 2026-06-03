@@ -1,2 +1,2 @@
 [alias]
-cov = ["llvm-cov", "--show-missing-lines", "--ignore-filename-regex", "rustc-.*-src", "--features", "non-blocking"]
+cov = ["llvm-cov", "--show-missing-lines", "--ignore-filename-regex", "rustc-.*-src"]

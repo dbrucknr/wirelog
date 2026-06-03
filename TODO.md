@@ -52,19 +52,14 @@
 
 ## Phase 5 — Non-blocking writer
 
-- [x] Implement `NonBlocking<W>` writer adapter (optional feature `non-blocking`)
-  - [x] `mpsc` channel (configurable capacity) + background writer thread
-  - [x] Drop counter for overflow — exposed via a `dropped()` method
-  - [x] `NonBlocking<W>` implements `std::io::Write` (drop-in sink for `Logger`)
-- [x] Tests: non-blocking path under load, drop counting, clean shutdown on `Logger` drop
-
-**Open design question — see `questions.md`.**
-Benchmarks show `NonBlocking<W>` is slower than the blocking path in single-threaded
-use (the `buf.to_vec()` allocation outweighs the uncontested mutex cost). The API
-also has a gap: `dropped()` is inaccessible after construction. A `WorkerGuard`
-pattern is needed before this is ready to publish. The strongest use case for a
-non-blocking write path is async code, where the correct solution may be
-`TokioNonBlocking<W>` rather than this synchronous adapter — see stretch goals.
+Removed before v0.1.0. A `NonBlocking<W>` implementation was prototyped and
+benchmarked but removed due to design issues: the `dropped()` counter was
+inaccessible after construction, `Drop` blocked on the background thread drain,
+and the single-threaded benchmark showed it was slower than the blocking path
+(`buf.to_vec()` + channel atomics outweigh an uncontested mutex). The correct
+API requires a `WorkerGuard` pattern. The strongest use case (async executors)
+calls for `TokioNonBlocking<W>` rather than this synchronous adapter — see
+stretch goals.
 
 ## Phase 6 — Polish & publish
 
