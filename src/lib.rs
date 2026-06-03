@@ -279,6 +279,13 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(any(
+        feature = "level-debug",
+        feature = "level-info",
+        feature = "level-warn",
+        feature = "level-error",
+        feature = "level-off",
+    )))]
     fn trace_level() {
         let (log, buf) = make_logger();
         log.trace().msg("trace event");
@@ -286,6 +293,12 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(any(
+        feature = "level-info",
+        feature = "level-warn",
+        feature = "level-error",
+        feature = "level-off",
+    )))]
     fn debug_level() {
         let (log, buf) = make_logger();
         log.debug().msg("debug event");
@@ -603,5 +616,56 @@ mod tests {
             serde_json::from_str::<Value>(line)
                 .unwrap_or_else(|e| panic!("byte 0x{b:02x} produced invalid JSON: {e}"));
         }
+    }
+
+    // --- Compile-time level filtering ---
+    // These tests only compile and run when the corresponding feature is active.
+    // The full test suite (cargo test, no features) validates logging behaviour;
+    // these validate that the compile-time gates actually suppress output.
+
+    #[test]
+    #[cfg(feature = "level-debug")]
+    fn compile_time_trace_is_disabled() {
+        let (log, buf) = make_logger();
+        log.trace().str("k", "v").msg("should be compiled out");
+        assert!(buf.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "level-info")]
+    fn compile_time_debug_is_disabled() {
+        let (log, buf) = make_logger();
+        log.debug().str("k", "v").msg("should be compiled out");
+        assert!(buf.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "level-warn")]
+    fn compile_time_info_is_disabled() {
+        let (log, buf) = make_logger();
+        log.info().str("k", "v").msg("should be compiled out");
+        assert!(buf.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "level-error")]
+    fn compile_time_warn_is_disabled() {
+        let (log, buf) = make_logger();
+        log.warn().str("k", "v").msg("should be compiled out");
+        assert!(buf.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "level-off")]
+    fn compile_time_all_levels_disabled() {
+        let (log, buf) = make_logger();
+        log.trace().msg("trace");
+        log.debug().msg("debug");
+        log.info().msg("info");
+        log.warn().msg("warn");
+        log.error().msg("error");
+        log.fatal().msg("fatal");
+        log.panic().msg("panic");
+        assert!(buf.lock().unwrap().is_empty());
     }
 }

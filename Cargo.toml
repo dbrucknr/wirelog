@@ -3,6 +3,22 @@ name = "wirelog"
 version = "0.1.0"
 edition = "2024"
 
+# Compile-time level filtering. Each feature sets the minimum level — levels below
+# it are compiled out entirely and cost nothing at runtime. Only one should be set;
+# if multiple are set, the most restrictive wins.
+#
+#   level-debug  — compile out trace
+#   level-info   — compile out trace, debug
+#   level-warn   — compile out trace, debug, info
+#   level-error  — compile out trace, debug, info, warn
+#   level-off    — compile out all levels
+[features]
+level-debug = []
+level-info  = []
+level-warn  = []
+level-error = []
+level-off   = []
+
 [dependencies]
 itoa = "1"
 ryu = "1"

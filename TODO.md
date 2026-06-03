@@ -45,8 +45,9 @@
 
 ## Phase 4 — Compile-time level filtering
 
-- [ ] Define Cargo features: `level-trace`, `level-debug`, `level-info`, `level-warn`, `level-error`, `level-off`
-- [ ] Gate level methods behind `#[cfg(feature = ...)]` so disabled levels are zero-cost
+- [x] Define Cargo features: `level-debug`, `level-info`, `level-warn`, `level-error`, `level-off` (no `level-trace` — all levels enabled is the default, no feature needed)
+- [x] Gate level methods behind `cfg!()` checks so disabled levels return `Event::disabled()` at compile time — branch is a constant bool, dead code is eliminated by the optimizer
+- [x] Add dedicated `compile_time_*` tests gated behind each feature flag; existing test suite runs cleanly with no features, `level-debug`, and `level-info`
 - [ ] Document feature flag behavior in README
 
 ## Phase 5 — Non-blocking writer
@@ -61,10 +62,15 @@
 
 - [x] `AnyLogger` type alias (`Logger<Box<dyn Write + Send>>`) and `Logger::boxed()` constructor — removes `<W>` generic from consumer types; benchmarked as zero overhead vs static dispatch
 - [x] Add runnable examples under `examples/`: `basic.rs`, `layered_static_dispatch.rs`
+- [x] Add `examples/layered_dynamic_dispatch.rs` demonstrating `AnyLogger` and `Logger::boxed()` as the ergonomic complement to `layered_static_dispatch.rs`
+- [ ] Complete `Cargo.toml` metadata required for crates.io: `description`, `license`, `repository`, `keywords`, `categories`, `rust-version` (MSRV)
+- [ ] Doc completeness pass: add `#[warn(missing_docs)]` and ensure all public items (`Level`, `Context`, `Event`, field methods) have doc comments
+- [ ] API surface review before v0.1.0: decide whether `Event<W>` and `Context<W>` should remain public types or be sealed — this cannot change after publish without a breaking release
+- [ ] Qualify the "zero allocation" claim in README — the per-event `Vec` allocation is eliminated but the `Mutex` (~160 ns) dominates; full claim holds only after Phase 5 `NonBlocking<W>`
 - [ ] `any(key, val)` field method via `serde::Serialize`
 - [ ] Pretty-print console writer (optional feature `pretty`)
 - [ ] `log` crate facade compatibility (optional feature `log-compat`)
-- [ ] Expand README with full API docs — defer benchmark numbers until Phase 5 (`NonBlocking`) is complete so the "zero allocation" claim and the data are aligned
+- [ ] Expand README with full API docs and benchmark numbers — defer until Phase 5 is complete so data and claims are aligned
 - [ ] `CHANGELOG.md`
 - [ ] CI (GitHub Actions): test + clippy + fmt check on stable + beta
 - [ ] Publish to crates.io
@@ -74,3 +80,32 @@
 - [ ] `wirelog-derive`: `#[derive(LogFields)]` proc macro for structured types (requires workspace)
 - [ ] `TokioNonBlocking<W>`: channel-based adapter backed by `tokio::io::AsyncWrite` + spawned task (optional feature `tokio`)
 - [ ] `tracing` subscriber backend
+
+## Async context — open design question
+
+wirelog is usable in async code today. The logging chain is synchronous but brief;
+the `thread_local!` buffer is safe across task migrations because it is moved into
+the `Event` at construction and returned to TLS on `Drop`, travelling with the task
+regardless of which thread it resumes on.
+
+Phase 5 `NonBlocking<W>` and the `TokioNonBlocking<W>` stretch goal address the
+executor-blocking concern by making the write path a channel send.
+
+The open question is **context propagation across `.await` points** — the ability
+to attach fields to a task and have them appear automatically on every log event
+emitted within that task, even after the task has yielded and resumed. This is what
+`tracing` spans solve, and it requires a fundamentally different design:
+
+- `task_local!` (tokio) or equivalent runtime-specific storage to carry context
+  across yield points, rather than the current `prefix: Vec<u8>` embedded in the
+  logger struct
+- A subscriber or hook model so context can be injected without explicit sublogger
+  threading
+- Per-task context that survives thread migration — incompatible with the current
+  `thread_local!` buffer pool if context were stored there (the buffer is fine;
+  context would not be)
+
+Implementing this would make wirelog a structural competitor to `tracing` rather
+than a complement to it. That is a deliberate scope decision, not a technical
+blocker. If pursued, it warrants its own design document before any code is
+written.
