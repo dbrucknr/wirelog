@@ -21,12 +21,14 @@ impl<W: Write + Send + 'static> Context<W> {
         Self { writer, level, buf }
     }
 
+    /// Adds a permanent string field to every event this context produces.
     pub fn str(mut self, key: &str, val: &str) -> Self {
         encode::append_key(&mut self.buf, key);
         encode::append_str_val(&mut self.buf, val);
         self
     }
 
+    /// Adds a permanent signed integer field.
     pub fn int(mut self, key: &str, val: i64) -> Self {
         encode::append_key(&mut self.buf, key);
         let mut b = itoa::Buffer::new();
@@ -34,6 +36,7 @@ impl<W: Write + Send + 'static> Context<W> {
         self
     }
 
+    /// Adds a permanent unsigned integer field.
     pub fn uint(mut self, key: &str, val: u64) -> Self {
         encode::append_key(&mut self.buf, key);
         let mut b = itoa::Buffer::new();
@@ -41,6 +44,7 @@ impl<W: Write + Send + 'static> Context<W> {
         self
     }
 
+    /// Adds a permanent floating-point field. Non-finite values (`NaN`, `±Inf`) are emitted as `null`.
     pub fn float(mut self, key: &str, val: f64) -> Self {
         encode::append_key(&mut self.buf, key);
         if val.is_finite() {
@@ -52,6 +56,7 @@ impl<W: Write + Send + 'static> Context<W> {
         self
     }
 
+    /// Adds a permanent boolean field.
     pub fn bool(mut self, key: &str, val: bool) -> Self {
         encode::append_key(&mut self.buf, key);
         self.buf
@@ -59,10 +64,12 @@ impl<W: Write + Send + 'static> Context<W> {
         self
     }
 
+    /// Adds a permanent error field with the fixed key `"error"`.
     pub fn err(self, e: &dyn std::error::Error) -> Self {
         self.str("error", &e.to_string())
     }
 
+    /// Adds a permanent duration field encoded as whole milliseconds.
     pub fn dur(mut self, key: &str, val: std::time::Duration) -> Self {
         encode::append_key(&mut self.buf, key);
         let mut b = itoa::Buffer::new();
@@ -73,6 +80,7 @@ impl<W: Write + Send + 'static> Context<W> {
         self
     }
 
+    /// Adds a permanent timestamp field encoded as an RFC 3339 string with millisecond precision.
     pub fn time(mut self, key: &str, val: std::time::SystemTime) -> Self {
         encode::append_key(&mut self.buf, key);
         self.buf.push(b'"');

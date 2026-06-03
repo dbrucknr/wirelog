@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 //! A structured JSON logger with [zerolog](https://github.com/rs/zerolog)-inspired ergonomics.
 //!
 //! Each log call produces a single newline-terminated JSON object written to any

@@ -15,6 +15,10 @@ pub struct Logger<W> {
 }
 
 impl<W: Write + Send + 'static> Logger<W> {
+    /// Creates a new logger writing to `writer`.
+    ///
+    /// The default minimum level is [`Level::Trace`] — all levels are active. Call
+    /// [`Logger::level`] to raise the minimum at runtime.
     pub fn new(writer: W) -> Self {
         Self {
             writer: Arc::new(Mutex::new(writer)),
@@ -31,6 +35,9 @@ impl<W: Write + Send + 'static> Logger<W> {
         }
     }
 
+    /// Sets the runtime minimum level. Events below this level are no-ops.
+    ///
+    /// Composes with compile-time level features: a level must pass both to produce output.
     pub fn level(mut self, level: Level) -> Self {
         self.level = level;
         self
@@ -49,6 +56,10 @@ impl<W: Write + Send + 'static> Logger<W> {
         }
     }
 
+    /// Returns a new [`Event`] at trace level.
+    ///
+    /// Compile-time no-op when any level feature is enabled. Runtime no-op when the
+    /// minimum level is above `Trace`.
     pub fn trace(&self) -> Event<W> {
         #[cfg(any(
             feature = "level-debug",
@@ -69,6 +80,9 @@ impl<W: Write + Send + 'static> Logger<W> {
         self.event(Level::Trace)
     }
 
+    /// Returns a new [`Event`] at debug level.
+    ///
+    /// Compile-time no-op with `level-info`, `level-warn`, `level-error`, or `level-off`.
     pub fn debug(&self) -> Event<W> {
         #[cfg(any(
             feature = "level-info",
@@ -87,6 +101,9 @@ impl<W: Write + Send + 'static> Logger<W> {
         self.event(Level::Debug)
     }
 
+    /// Returns a new [`Event`] at info level.
+    ///
+    /// Compile-time no-op with `level-warn`, `level-error`, or `level-off`.
     pub fn info(&self) -> Event<W> {
         #[cfg(any(feature = "level-warn", feature = "level-error", feature = "level-off",))]
         return Event::disabled();
@@ -95,6 +112,9 @@ impl<W: Write + Send + 'static> Logger<W> {
         self.event(Level::Info)
     }
 
+    /// Returns a new [`Event`] at warn level.
+    ///
+    /// Compile-time no-op with `level-error` or `level-off`.
     pub fn warn(&self) -> Event<W> {
         #[cfg(any(feature = "level-error", feature = "level-off"))]
         return Event::disabled();
@@ -103,6 +123,9 @@ impl<W: Write + Send + 'static> Logger<W> {
         self.event(Level::Warn)
     }
 
+    /// Returns a new [`Event`] at error level.
+    ///
+    /// Compile-time no-op with `level-off`.
     pub fn error(&self) -> Event<W> {
         #[cfg(feature = "level-off")]
         return Event::disabled();
@@ -111,6 +134,10 @@ impl<W: Write + Send + 'static> Logger<W> {
         self.event(Level::Error)
     }
 
+    /// Returns a new [`Event`] at fatal level.
+    ///
+    /// Does not exit the process — that responsibility belongs to the caller.
+    /// Compile-time no-op with `level-off`.
     pub fn fatal(&self) -> Event<W> {
         #[cfg(feature = "level-off")]
         return Event::disabled();
@@ -119,6 +146,10 @@ impl<W: Write + Send + 'static> Logger<W> {
         self.event(Level::Fatal)
     }
 
+    /// Returns a new [`Event`] at panic level.
+    ///
+    /// Does not call `panic!()` — that responsibility belongs to the caller.
+    /// Compile-time no-op with `level-off`.
     pub fn panic(&self) -> Event<W> {
         #[cfg(feature = "level-off")]
         return Event::disabled();

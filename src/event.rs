@@ -40,6 +40,7 @@ impl<W: Write + Send + 'static> Event<W> {
         }
     }
 
+    /// Appends a string field.
     pub fn str(mut self, key: &str, val: &str) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
@@ -48,6 +49,7 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
+    /// Appends a signed integer field.
     pub fn int(mut self, key: &str, val: i64) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
@@ -57,6 +59,7 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
+    /// Appends an unsigned integer field.
     pub fn uint(mut self, key: &str, val: u64) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
@@ -66,6 +69,7 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
+    /// Appends a floating-point field. Non-finite values (`NaN`, `±Inf`) are emitted as `null`.
     pub fn float(mut self, key: &str, val: f64) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
@@ -79,6 +83,7 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
+    /// Appends a boolean field.
     pub fn bool(mut self, key: &str, val: bool) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
@@ -88,10 +93,12 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
+    /// Appends an error field with the fixed key `"error"`.
     pub fn err(self, e: &dyn std::error::Error) -> Self {
         self.str("error", &e.to_string())
     }
 
+    /// Appends a duration field encoded as whole milliseconds.
     pub fn dur(mut self, key: &str, val: std::time::Duration) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
@@ -104,6 +111,7 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
+    /// Appends a timestamp field encoded as an RFC 3339 string with millisecond precision.
     pub fn time(mut self, key: &str, val: std::time::SystemTime) -> Self {
         if self.writer.is_some() {
             encode::append_key(&mut self.buf, key);
@@ -114,10 +122,12 @@ impl<W: Write + Send + 'static> Event<W> {
         self
     }
 
+    /// Appends a `"message"` field and flushes the event to the writer.
     pub fn msg(self, msg: &str) {
         self.flush(Some(msg));
     }
 
+    /// Flushes the event to the writer without a `"message"` field.
     pub fn send(self) {
         self.flush(None);
     }

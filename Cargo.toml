@@ -2,6 +2,12 @@
 name = "wirelog"
 version = "0.1.0"
 edition = "2024"
+description = "Structured JSON logger with zerolog-inspired ergonomics"
+license = "MIT"
+repository = "https://github.com/dbrucknr/wirelog"
+keywords = ["logging", "log", "json", "structured-logging", "zerolog"]
+categories = ["development-tools::debugging"]
+rust-version = "1.85"
 
 # Compile-time level filtering. Each feature sets the minimum level — levels below
 # it are compiled out entirely and cost nothing at runtime. Only one should be set;

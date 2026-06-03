@@ -66,16 +66,16 @@ stretch goals.
 - [x] `AnyLogger` type alias (`Logger<Box<dyn Write + Send>>`) and `Logger::boxed()` constructor — removes `<W>` generic from consumer types; benchmarked as zero overhead vs static dispatch
 - [x] Add runnable examples under `examples/`: `basic.rs`, `layered_static_dispatch.rs`
 - [x] Add `examples/layered_dynamic_dispatch.rs` demonstrating `AnyLogger` and `Logger::boxed()` as the ergonomic complement to `layered_static_dispatch.rs`
-- [ ] Complete `Cargo.toml` metadata required for crates.io: `description`, `license`, `repository`, `keywords`, `categories`, `rust-version` (MSRV)
-- [ ] Doc completeness pass: add `#[warn(missing_docs)]` and ensure all public items (`Level`, `Context`, `Event`, field methods) have doc comments
-- [ ] API surface review before v0.1.0: decide whether `Event<W>` and `Context<W>` should remain public types or be sealed — this cannot change after publish without a breaking release
-- [ ] Qualify the "zero allocation" claim in README — the per-event `Vec` allocation is eliminated but the `Mutex` (~160 ns) dominates; full claim holds only after Phase 5 `NonBlocking<W>`
+- [x] Complete `Cargo.toml` metadata required for crates.io: `description`, `license`, `repository`, `keywords`, `categories`, `rust-version` (MSRV)
+- [x] Doc completeness pass: add `#[warn(missing_docs)]` and ensure all public items (`Level`, `Context`, `Event`, field methods) have doc comments
+- [x] API surface review before v0.1.0: `Event<W>` and `Context<W>` remain public — constructors are `pub(crate)`, but users can name the types in helper function signatures
+- [x] Qualify the "zero allocation" claim in README — the per-event allocation is eliminated; the Performance section documents the `Mutex` cost (~160 ns) as the dominant overhead
 - [ ] `any(key, val)` field method via `serde::Serialize`
 - [ ] Pretty-print console writer (optional feature `pretty`)
 - [ ] `log` crate facade compatibility (optional feature `log-compat`)
 - [ ] Expand README with full API docs and benchmark numbers — defer until Phase 5 is complete so data and claims are aligned
-- [ ] `CHANGELOG.md`
-- [ ] CI (GitHub Actions): test + clippy + fmt check on stable + beta
+- [x] `CHANGELOG.md`
+- [x] CI (GitHub Actions): test + clippy + fmt check on stable + beta
 - [ ] Publish to crates.io
 
 ## Future / stretch
