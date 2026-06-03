@@ -5,7 +5,7 @@ use wirelog::Logger;
 fn main() {
     let logger = Logger::new(std::io::stdout());
 
-    // Basic Hello World
+    // Basic 'Hello World'
     logger.info().msg("Hello, world!");
 
     // Log an error with a key/value pair
