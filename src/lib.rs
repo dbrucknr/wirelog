@@ -57,7 +57,7 @@
 //!
 //! ## Performance
 //!
-//! Measured with criterion on an Apple M-series chip, writing to [`io::sink()`]:
+//! Measured with criterion on an Apple M-series chip, writing to [`std::io::sink()`]:
 //!
 //! | | `Logger<W>` | `AnyLogger` |
 //! |---|---|---|

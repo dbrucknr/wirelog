@@ -112,5 +112,10 @@ fn wirelog_dynamic_benchmarks(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, wirelog_benchmarks, wirelog_dynamic_benchmarks, tracing_benchmarks);
+criterion_group!(
+    benches,
+    wirelog_benchmarks,
+    wirelog_dynamic_benchmarks,
+    tracing_benchmarks
+);
 criterion_main!(benches);
