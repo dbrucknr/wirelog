@@ -1,5 +1,5 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use std::io;
+use std::io::{self, BufWriter};
 
 // cargo bench
 // open target/criterion/report/index.html
@@ -76,6 +76,42 @@ fn tracing_benchmarks(c: &mut Criterion) {
     });
 }
 
+fn wirelog_bufwriter_benchmarks(c: &mut Criterion) {
+    // BufWriter<io::sink()> isolates the in-process cost of buffering:
+    // write_all copies into BufWriter's heap buffer; no underlying I/O occurs
+    // until the buffer fills or the BufWriter is flushed explicitly.
+    // Comparing these numbers against wirelog/single_field shows the overhead
+    // of the extra memcpy into the BufWriter buffer.
+    let logger = wirelog::Logger::new(BufWriter::with_capacity(8 * 1024, io::sink()));
+    c.bench_function("wirelog_buf/single_field", |b| {
+        b.iter(|| {
+            logger
+                .info()
+                .str(black_box("key"), black_box("value"))
+                .msg(black_box("hello"))
+        })
+    });
+
+    let logger = wirelog::Logger::new(BufWriter::with_capacity(8 * 1024, io::sink()));
+    c.bench_function("wirelog_buf/ten_fields", |b| {
+        b.iter(|| {
+            logger
+                .info()
+                .str("a", "1")
+                .str("b", "2")
+                .str("c", "3")
+                .int("d", 4)
+                .int("e", 5)
+                .int("f", 6)
+                .bool("g", true)
+                .bool("h", false)
+                .uint("i", 9)
+                .float("j", 1.5)
+                .msg("ten")
+        })
+    });
+}
+
 fn wirelog_dynamic_benchmarks(c: &mut Criterion) {
     let logger = wirelog::Logger::boxed(io::sink()).level(wirelog::Level::Error);
     c.bench_function("wirelog_dyn/disabled_event", |b| {
@@ -115,6 +151,7 @@ fn wirelog_dynamic_benchmarks(c: &mut Criterion) {
 criterion_group!(
     benches,
     wirelog_benchmarks,
+    wirelog_bufwriter_benchmarks,
     wirelog_dynamic_benchmarks,
     tracing_benchmarks
 );

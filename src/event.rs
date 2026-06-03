@@ -144,7 +144,6 @@ impl<W: Write + Send + 'static> Event<W> {
 
             let mut w = writer.lock().unwrap();
             let _ = w.write_all(&self.buf);
-            let _ = w.flush();
         }
         // Drop runs here, which returns the buffer to TLS.
     }

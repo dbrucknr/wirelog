@@ -205,6 +205,40 @@ dominates and makes the dispatch overhead unmeasurable.
 
 ---
 
+## Choosing a writer
+
+wirelog does not flush after each event — flushing is the writer's
+responsibility. The right choice depends on your sink:
+
+**stdout / stderr** — use directly. The OS line-buffers stdout to a terminal
+(each `\n` triggers a flush) and leaves stderr unbuffered. No wrapping needed.
+
+```rust
+let log = Logger::new(std::io::stderr());
+```
+
+**File sink** — wrap with [`BufWriter`](https://doc.rust-lang.org/std/io/struct.BufWriter.html).
+Without it, every event is a syscall. `BufWriter` batches events into 8 KB
+chunks, dramatically reducing syscall count and Mutex hold time under load.
+
+```rust
+use std::{fs::File, io::BufWriter};
+
+let log = Logger::new(BufWriter::new(File::create("app.log")?));
+```
+
+**File sink with crash safety** — use [`LineWriter`](https://doc.rust-lang.org/std/io/struct.LineWriter.html).
+It flushes after every `\n`, which is exactly how wirelog terminates each event.
+Each event reaches the file immediately without requiring a manual flush call.
+
+```rust
+use std::{fs::File, io::LineWriter};
+
+let log = Logger::new(LineWriter::new(File::create("app.log")?));
+```
+
+---
+
 ## Performance
 
 Measured with [criterion](https://github.com/bheisler/criterion.rs) on Apple
@@ -217,7 +251,9 @@ M-series (arm64), writing to `io::sink()` to isolate encoding cost from I/O.
 | ten fields | 285 ns | 1,181 ns | **~4× faster** |
 
 The hot path is allocation-free in steady state — a thread-local buffer is reused
-across events. The dominant cost is `Mutex` acquisition (~160 ns).
+across events. The dominant cost is `Mutex` acquisition (~20 ns lock/unlock) plus
+the underlying write. See [Choosing a writer](#choosing-a-writer) for how to
+reduce that cost with `BufWriter`.
 
 **Disabled event note:** tracing's 0.3 ns reflects its static callsite interest
 cache — after the first dispatch the check is a single atomic load. wirelog's

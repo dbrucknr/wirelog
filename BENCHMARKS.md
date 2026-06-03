@@ -79,6 +79,38 @@ unmeasurable next to the `Mutex` acquisition cost.
 
 ---
 
+### Flush removal — reduce Mutex hold time
+
+wirelog no longer calls `w.flush()` after every `write_all`. Flushing is now
+the writer's responsibility, following the convention of other `Write`-sink
+loggers (zerolog, slog). This change has two effects:
+
+1. **`BufWriter<W>` now works as intended.** Previously, the per-event flush
+   forced `BufWriter` to write through to the underlying writer on every event,
+   defeating its purpose. Now, writes accumulate in the buffer and reach the
+   underlying writer only when the buffer fills or the `BufWriter` is flushed
+   explicitly.
+
+2. **The Mutex is held for less time with I/O-bound writers.** One `write_all`
+   (memcpy or syscall) instead of `write_all` + `flush` (two syscalls for file
+   and pipe writers).
+
+The benchmark below measures `BufWriter<io::sink()>` to isolate the
+in-process cost: `write_all` copies into BufWriter's heap buffer; no
+underlying I/O occurs.
+
+| benchmark | `io::sink()` | `BufWriter<io::sink()>` | overhead |
+|---|---|---|---|
+| single field | 170 ns | 177 ns | +7 ns |
+| ten fields | 294 ns | 300 ns | +6 ns |
+
+**The ~7 ns overhead is a memcpy into BufWriter's buffer** — negligible. Use
+`BufWriter<W>` freely for any writer where I/O latency is a concern. For crash
+safety with a file writer, use `io::LineWriter<File>` instead: it flushes after
+each `\n`, which is exactly how wirelog terminates every event.
+
+---
+
 ### Phase 3 — `thread_local!` buffer reuse
 
 Criterion baseline saved as: `phase3-buffer-reuse`
