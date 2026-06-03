@@ -76,5 +76,41 @@ fn tracing_benchmarks(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, wirelog_benchmarks, tracing_benchmarks);
+fn wirelog_dynamic_benchmarks(c: &mut Criterion) {
+    let logger = wirelog::Logger::boxed(io::sink()).level(wirelog::Level::Error);
+    c.bench_function("wirelog_dyn/disabled_event", |b| {
+        b.iter(|| logger.trace().msg(black_box("noop")))
+    });
+
+    let logger = wirelog::Logger::boxed(io::sink());
+    c.bench_function("wirelog_dyn/single_field", |b| {
+        b.iter(|| {
+            logger
+                .info()
+                .str(black_box("key"), black_box("value"))
+                .msg(black_box("hello"))
+        })
+    });
+
+    let logger = wirelog::Logger::boxed(io::sink());
+    c.bench_function("wirelog_dyn/ten_fields", |b| {
+        b.iter(|| {
+            logger
+                .info()
+                .str("a", "1")
+                .str("b", "2")
+                .str("c", "3")
+                .int("d", 4)
+                .int("e", 5)
+                .int("f", 6)
+                .bool("g", true)
+                .bool("h", false)
+                .uint("i", 9)
+                .float("j", 1.5)
+                .msg("ten")
+        })
+    });
+}
+
+criterion_group!(benches, wirelog_benchmarks, wirelog_dynamic_benchmarks, tracing_benchmarks);
 criterion_main!(benches);

@@ -1,3 +1,88 @@
+//! A structured JSON logger with [zerolog](https://github.com/rs/zerolog)-inspired ergonomics.
+//!
+//! Each log call produces a single newline-terminated JSON object written to any
+//! [`std::io::Write`] sink. Fields are typed and appended via a fluent builder; the
+//! event is flushed only when `.msg()` or `.send()` is called.
+//!
+//! # Dispatch strategy
+//!
+//! wirelog offers two ways to hold a logger. Choose based on how much the generic
+//! parameter matters to your codebase.
+//!
+//! ## Static dispatch — `Logger<W>`
+//!
+//! The writer type is a generic parameter. The compiler monomorphizes the logger
+//! for your exact writer and can fully inline and optimize the write path. The
+//! tradeoff: the `<W>` parameter propagates into every struct and `impl` that
+//! stores a logger.
+//!
+//! ```rust
+//! use wirelog::Logger;
+//! use std::io;
+//!
+//! // W is known at compile time — no allocation, no indirection.
+//! let logger = Logger::new(io::stdout());
+//! logger.info().str("key", "value").msg("hello");
+//! ```
+//!
+//! Best for: library crates, shallow call chains, situations where the writer
+//! type is fixed and you want zero overhead.
+//!
+//! ## Dynamic dispatch — `AnyLogger`
+//!
+//! A type alias for `Logger<Box<dyn Write + Send>>`. The writer is erased behind a
+//! trait object, removing the `<W>` parameter from every consumer type.
+//!
+//! ```rust
+//! use wirelog::AnyLogger;
+//!
+//! // No generic parameter anywhere — easier to thread through application layers.
+//! struct Server {
+//!     logger: AnyLogger,
+//! }
+//! ```
+//!
+//! Construct one with [`Logger::boxed`]:
+//!
+//! ```rust
+//! use wirelog::Logger;
+//! use std::io;
+//!
+//! let logger = Logger::boxed(io::stdout());
+//! logger.info().msg("hello");
+//! ```
+//!
+//! Best for: application crates, layered architectures (controller → service →
+//! repository), anywhere ergonomics matter more than squeezing the last nanosecond.
+//!
+//! ## Performance
+//!
+//! Measured with criterion on an Apple M-series chip, writing to [`io::sink()`]:
+//!
+//! | | `Logger<W>` | `AnyLogger` |
+//! |---|---|---|
+//! | single field | 174 ns | 173 ns |
+//! | ten fields | 290 ns | 296 ns |
+//! | disabled event (filtered) | 2 ns | 2 ns |
+//!
+//! The vtable lookup is indistinguishable from static dispatch in practice.
+//! Every write is already serialized through a `Mutex`; the lock acquisition
+//! dominates and makes the dispatch cost unmeasurable.
+//!
+//! ## Memory
+//!
+//! Both variants have the same stack size — `Logger<W>` is always a pointer
+//! (`Arc`), a level byte, and a prefix `Vec`, regardless of `W`.
+//!
+//! The heap differs:
+//!
+//! - **Static**: `Arc` → `Mutex<W>` (writer embedded directly in the Arc allocation)
+//! - **Dynamic**: `Arc` → `Mutex<Box<dyn Write + Send>>` → writer (one extra
+//!   indirection and one extra heap allocation)
+//!
+//! This is a fixed, one-time cost paid at logger construction — invisible at
+//! runtime on any path that actually writes a log line.
+
 mod context;
 mod encode;
 mod event;
@@ -8,6 +93,15 @@ pub use context::Context;
 pub use event::Event;
 pub use level::Level;
 pub use logger::Logger;
+
+/// Type-erased logger. A convenience alias for `Logger<Box<dyn std::io::Write + Send>>`.
+///
+/// Removes the `<W>` generic parameter from every type that stores a logger, at the
+/// cost of one extra heap allocation and one pointer indirection per logger instance.
+/// In practice this overhead is unmeasurable — see the crate-level docs for benchmarks.
+///
+/// Construct one with [`Logger::boxed`].
+pub type AnyLogger = Logger<Box<dyn std::io::Write + Send>>;
 
 #[cfg(test)]
 mod tests {

@@ -4,8 +4,10 @@ use std::sync::{Arc, Mutex};
 use crate::context::Context;
 use crate::{Event, Level};
 
-/// A structured JSON logger. Generic over `W: Write + Send` to avoid vtable overhead on the
-/// write path. Use `Logger<Box<dyn Write + Send>>` if you need a type-erased logger.
+/// A structured JSON logger, generic over its writer `W`.
+///
+/// See the [crate-level documentation](crate) for a full explanation of when to use
+/// `Logger<W>` (static dispatch) versus [`AnyLogger`](crate::AnyLogger) (dynamic dispatch).
 pub struct Logger<W> {
     writer: Arc<Mutex<W>>,
     level: Level,
@@ -67,6 +69,23 @@ impl<W: Write + Send + 'static> Logger<W> {
     }
     pub fn panic(&self) -> Event<W> {
         self.event(Level::Panic)
+    }
+}
+
+impl Logger<Box<dyn Write + Send>> {
+    /// Constructs a type-erased [`AnyLogger`](crate::AnyLogger) by boxing the writer.
+    ///
+    /// Equivalent to `Logger::new(Box::new(writer))`. Use this when you want to avoid
+    /// propagating the `<W>` generic parameter through your types.
+    ///
+    /// ```rust
+    /// use wirelog::Logger;
+    ///
+    /// let logger = Logger::boxed(std::io::stdout());
+    /// logger.info().str("env", "production").msg("server started");
+    /// ```
+    pub fn boxed(writer: impl Write + Send + 'static) -> Self {
+        Self::new(Box::new(writer))
     }
 }
 
