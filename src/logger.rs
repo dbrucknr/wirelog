@@ -50,66 +50,80 @@ impl<W: Write + Send + 'static> Logger<W> {
     }
 
     pub fn trace(&self) -> Event<W> {
-        if cfg!(any(
+        #[cfg(any(
             feature = "level-debug",
             feature = "level-info",
             feature = "level-warn",
             feature = "level-error",
             feature = "level-off",
-        )) {
-            return Event::disabled();
-        }
-        self.event(Level::Trace)
-    }
+        ))]
+        return Event::disabled();
 
-    pub fn debug(&self) -> Event<W> {
-        if cfg!(any(
+        #[cfg(not(any(
+            feature = "level-debug",
             feature = "level-info",
             feature = "level-warn",
             feature = "level-error",
             feature = "level-off",
-        )) {
-            return Event::disabled();
-        }
+        )))]
+        self.event(Level::Trace)
+    }
+
+    pub fn debug(&self) -> Event<W> {
+        #[cfg(any(
+            feature = "level-info",
+            feature = "level-warn",
+            feature = "level-error",
+            feature = "level-off",
+        ))]
+        return Event::disabled();
+
+        #[cfg(not(any(
+            feature = "level-info",
+            feature = "level-warn",
+            feature = "level-error",
+            feature = "level-off",
+        )))]
         self.event(Level::Debug)
     }
 
     pub fn info(&self) -> Event<W> {
-        if cfg!(any(
-            feature = "level-warn",
-            feature = "level-error",
-            feature = "level-off",
-        )) {
-            return Event::disabled();
-        }
+        #[cfg(any(feature = "level-warn", feature = "level-error", feature = "level-off",))]
+        return Event::disabled();
+
+        #[cfg(not(any(feature = "level-warn", feature = "level-error", feature = "level-off",)))]
         self.event(Level::Info)
     }
 
     pub fn warn(&self) -> Event<W> {
-        if cfg!(any(feature = "level-error", feature = "level-off")) {
-            return Event::disabled();
-        }
+        #[cfg(any(feature = "level-error", feature = "level-off"))]
+        return Event::disabled();
+
+        #[cfg(not(any(feature = "level-error", feature = "level-off")))]
         self.event(Level::Warn)
     }
 
     pub fn error(&self) -> Event<W> {
-        if cfg!(feature = "level-off") {
-            return Event::disabled();
-        }
+        #[cfg(feature = "level-off")]
+        return Event::disabled();
+
+        #[cfg(not(feature = "level-off"))]
         self.event(Level::Error)
     }
 
     pub fn fatal(&self) -> Event<W> {
-        if cfg!(feature = "level-off") {
-            return Event::disabled();
-        }
+        #[cfg(feature = "level-off")]
+        return Event::disabled();
+
+        #[cfg(not(feature = "level-off"))]
         self.event(Level::Fatal)
     }
 
     pub fn panic(&self) -> Event<W> {
-        if cfg!(feature = "level-off") {
-            return Event::disabled();
-        }
+        #[cfg(feature = "level-off")]
+        return Event::disabled();
+
+        #[cfg(not(feature = "level-off"))]
         self.event(Level::Panic)
     }
 }

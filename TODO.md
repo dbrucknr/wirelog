@@ -58,6 +58,14 @@
   - [x] `NonBlocking<W>` implements `std::io::Write` (drop-in sink for `Logger`)
 - [x] Tests: non-blocking path under load, drop counting, clean shutdown on `Logger` drop
 
+**Open design question — see `questions.md`.**
+Benchmarks show `NonBlocking<W>` is slower than the blocking path in single-threaded
+use (the `buf.to_vec()` allocation outweighs the uncontested mutex cost). The API
+also has a gap: `dropped()` is inaccessible after construction. A `WorkerGuard`
+pattern is needed before this is ready to publish. The strongest use case for a
+non-blocking write path is async code, where the correct solution may be
+`TokioNonBlocking<W>` rather than this synchronous adapter — see stretch goals.
+
 ## Phase 6 — Polish & publish
 
 - [x] `AnyLogger` type alias (`Logger<Box<dyn Write + Send>>`) and `Logger::boxed()` constructor — removes `<W>` generic from consumer types; benchmarked as zero overhead vs static dispatch
@@ -89,7 +97,12 @@ the `Event` at construction and returned to TLS on `Drop`, travelling with the t
 regardless of which thread it resumes on.
 
 Phase 5 `NonBlocking<W>` and the `TokioNonBlocking<W>` stretch goal address the
-executor-blocking concern by making the write path a channel send.
+executor-blocking concern by making the write path a channel send. However,
+`NonBlocking<W>` uses `std::thread` and is orthogonal to Tokio's runtime — it
+does not eliminate executor thread blocking, it just moves the blocking to a
+different OS thread. `TokioNonBlocking<W>` (using `tokio::sync::mpsc` +
+`tokio::spawn` + `tokio::io::AsyncWrite`) is the correct solution when the goal
+is genuinely non-blocking I/O within an async executor.
 
 The open question is **context propagation across `.await` points** — the ability
 to attach fields to a task and have them appear automatically on every log event
