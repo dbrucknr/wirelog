@@ -36,10 +36,12 @@
 
 ## Phase 3 — Performance
 
-- [ ] Benchmark baseline vs `tracing` + JSON subscriber
-- [ ] Evaluate buffer reuse strategy: `thread_local!` pool vs per-logger pool
-- [ ] Profile and eliminate remaining allocations on hot path
-- [ ] Add `benches/` with criterion benchmarks: disabled event, single field, ten fields
+- [x] Benchmark baseline vs `tracing` + JSON subscriber
+- [x] Add `benches/` with criterion benchmarks: disabled event, single field, ten fields (static + dynamic dispatch variants)
+- [x] Evaluate buffer reuse strategy: `thread_local!` pool vs per-logger pool — chose `thread_local!`; per-logger pool would put the buffer behind the same `Mutex` as the writer, gaining nothing
+- [x] Implement `thread_local!` buffer pool: `Event::new()` takes buffer from TLS via `mem::take`; `Drop` returns it after flush or discard
+- [x] Profile and eliminate remaining allocations on hot path — `Vec::with_capacity(256)` per event was the only allocation; eliminated (~7 ns saved). Remaining bottleneck is `Mutex` acquisition (~160 ns); addressed in Phase 5 via `NonBlocking<W>`
+- [x] Add `BENCHMARKS.md` with milestone snapshots, criterion baseline workflow, and principles for tracking progress and regressions
 
 ## Phase 4 — Compile-time level filtering
 
@@ -57,10 +59,12 @@
 
 ## Phase 6 — Polish & publish
 
+- [x] `AnyLogger` type alias (`Logger<Box<dyn Write + Send>>`) and `Logger::boxed()` constructor — removes `<W>` generic from consumer types; benchmarked as zero overhead vs static dispatch
+- [x] Add runnable examples under `examples/`: `basic.rs`, `layered_static_dispatch.rs`
 - [ ] `any(key, val)` field method via `serde::Serialize`
 - [ ] Pretty-print console writer (optional feature `pretty`)
 - [ ] `log` crate facade compatibility (optional feature `log-compat`)
-- [ ] Expand README with full API docs and runnable examples under `examples/`
+- [ ] Expand README with full API docs — defer benchmark numbers until Phase 5 (`NonBlocking`) is complete so the "zero allocation" claim and the data are aligned
 - [ ] `CHANGELOG.md`
 - [ ] CI (GitHub Actions): test + clippy + fmt check on stable + beta
 - [ ] Publish to crates.io

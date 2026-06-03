@@ -1,9 +1,14 @@
+use std::cell::RefCell;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
 
 use crate::encode;
 use crate::level::Level;
+
+thread_local! {
+    static BUF: RefCell<Vec<u8>> = RefCell::new(Vec::with_capacity(256));
+}
 
 /// A single log event. Returned by [`Logger`](crate::Logger) level methods and consumed by `.msg()` or
 /// `.send()`. When the logger's minimum level filters this event out, all field methods are
@@ -15,7 +20,9 @@ pub struct Event<W> {
 
 impl<W: Write + Send + 'static> Event<W> {
     pub(crate) fn new(writer: Arc<Mutex<W>>, level: Level, prefix: &[u8]) -> Self {
-        let mut buf = Vec::with_capacity(256 + prefix.len());
+        let mut buf = BUF.with(|cell| std::mem::take(&mut *cell.borrow_mut()));
+        buf.clear();
+        buf.reserve(256 + prefix.len());
         buf.extend_from_slice(b"{\"level\":\"");
         buf.extend_from_slice(level.as_str().as_bytes());
         buf.push(b'"');
@@ -128,6 +135,24 @@ impl<W: Write + Send + 'static> Event<W> {
             let mut w = writer.lock().unwrap();
             let _ = w.write_all(&self.buf);
             let _ = w.flush();
+        }
+        // Drop runs here, which returns the buffer to TLS.
+    }
+}
+
+impl<W> Drop for Event<W> {
+    fn drop(&mut self) {
+        // Disabled events use Vec::new() (capacity 0, no allocation) — nothing to return.
+        if self.buf.capacity() > 0 {
+            let mut buf = std::mem::take(&mut self.buf);
+            buf.clear();
+            BUF.with(|cell| {
+                let mut tls = cell.borrow_mut();
+                // Keep whichever buffer grew larger to avoid shrinking the pool.
+                if buf.capacity() > tls.capacity() {
+                    *tls = buf;
+                }
+            });
         }
     }
 }
