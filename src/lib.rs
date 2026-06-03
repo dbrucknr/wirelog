@@ -457,6 +457,30 @@ mod tests {
     }
 
     #[test]
+    fn disabled_event_float_is_noop() {
+        let (log, buf) = make_logger();
+        let log = log.level(Level::Warn);
+        log.debug().float("x", 1.5).msg("should not appear");
+        assert!(buf.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn context_float_nan_emits_null() {
+        let (log, buf) = make_logger();
+        let sub = log.with().float("x", f64::NAN).logger();
+        sub.info().send();
+        assert!(parse(&buf)["x"].is_null());
+    }
+
+    #[test]
+    fn boxed_logger_works() {
+        let buf = Arc::new(Mutex::new(Vec::new()));
+        let logger = Logger::boxed(SharedBuf(Arc::clone(&buf)));
+        logger.info().str("k", "v").msg("ok");
+        assert_eq!(parse(&buf)["k"], "v");
+    }
+
+    #[test]
     fn concurrent_writes_are_not_interleaved() {
         use std::thread;
         let buf = Arc::new(Mutex::new(Vec::new()));
@@ -474,12 +498,7 @@ mod tests {
         let raw = buf.lock().unwrap();
         let output = std::str::from_utf8(&raw).unwrap();
         let lines: Vec<&str> = output.lines().collect();
-        assert_eq!(
-            lines.len(),
-            n,
-            "expected {n} complete lines, got {}",
-            lines.len()
-        );
+        assert_eq!(lines.len(), n);
         for line in lines {
             serde_json::from_str::<Value>(line).expect("each line must be valid JSON");
         }
