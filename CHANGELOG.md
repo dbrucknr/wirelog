@@ -26,4 +26,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `float()` encodes `NaN` and `±Inf` as JSON `null`
 - `dur()` encodes `Duration` as whole milliseconds with saturating cast for extreme values
 - Criterion benchmarks: disabled event, single field, ten fields (static and dynamic dispatch)
-- Examples: `basic`, `layered_static_dispatch`, `layered_dyn_dispatch`
+- Examples: `basic`, `layered_static_dispatch`, `layered_dyn_dispatch`, `file_sink`
+
+[0.1.0]: https://github.com/dbrucknr/wirelog/releases/tag/v0.1.0
