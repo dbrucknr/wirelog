@@ -19,9 +19,17 @@ fn main() -> std::io::Result<()> {
         let log = Logger::new(BufWriter::new(File::create("wirelog-buf.log")?));
 
         log.info().msg("server started");
-        log.info().str("request_id", "abc-123").int("status", 200).msg("request complete");
-        log.warn().str("queue", "jobs").uint("depth", 9_500).msg("queue depth high");
-        log.error().str("host", "db.internal").msg("database unreachable");
+        log.info()
+            .str("request_id", "abc-123")
+            .int("status", 200)
+            .msg("request complete");
+        log.warn()
+            .str("queue", "jobs")
+            .uint("depth", 9_500)
+            .msg("queue depth high");
+        log.error()
+            .str("host", "db.internal")
+            .msg("database unreachable");
         log.info().msg("server stopped");
         // BufWriter::flush() is called here by Drop.
     }
@@ -35,9 +43,17 @@ fn main() -> std::io::Result<()> {
         let log = Logger::new(LineWriter::new(File::create("wirelog-line.log")?));
 
         log.info().msg("server started");
-        log.info().str("request_id", "abc-123").int("status", 200).msg("request complete");
-        log.warn().str("queue", "jobs").uint("depth", 9_500).msg("queue depth high");
-        log.error().str("host", "db.internal").msg("database unreachable");
+        log.info()
+            .str("request_id", "abc-123")
+            .int("status", 200)
+            .msg("request complete");
+        log.warn()
+            .str("queue", "jobs")
+            .uint("depth", 9_500)
+            .msg("queue depth high");
+        log.error()
+            .str("host", "db.internal")
+            .msg("database unreachable");
         log.info().msg("server stopped");
         // Each event was already on disk the moment it was written.
     }

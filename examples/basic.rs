@@ -63,7 +63,10 @@ fn main() {
 
     // Runtime level filtering — events below the minimum are no-ops
     let filtered = logger.clone().level(Level::Warn);
-    filtered.debug().str("k", "v").msg("suppressed — below warn");
+    filtered
+        .debug()
+        .str("k", "v")
+        .msg("suppressed — below warn");
     filtered.info().str("k", "v").msg("suppressed — below warn");
     filtered.warn().msg("emitted — at threshold");
     filtered.error().msg("emitted — above threshold");
