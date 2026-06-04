@@ -322,6 +322,23 @@ mod tests {
     }
 
     #[test]
+    fn level_display() {
+        assert_eq!(Level::Trace.to_string(), "trace");
+        assert_eq!(Level::Debug.to_string(), "debug");
+        assert_eq!(Level::Info.to_string(), "info");
+        assert_eq!(Level::Warn.to_string(), "warn");
+        assert_eq!(Level::Error.to_string(), "error");
+        assert_eq!(Level::Fatal.to_string(), "fatal");
+        assert_eq!(Level::Panic.to_string(), "panic");
+    }
+
+    #[test]
+    fn shared_buf_flush_is_noop() {
+        let buf = Arc::new(Mutex::new(Vec::new()));
+        assert!(SharedBuf(Arc::clone(&buf)).flush().is_ok());
+    }
+
+    #[test]
     fn output_is_valid_json_line() {
         let (log, buf) = make_logger();
         log.info().str("a", "b").int("n", 1).msg("test");
@@ -433,6 +450,14 @@ mod tests {
     }
 
     #[test]
+    fn context_bool_false_field() {
+        let (log, buf) = make_logger();
+        let sub = log.with().bool("active", false).logger();
+        sub.info().msg("ok");
+        assert_eq!(parse(&buf)["active"], false);
+    }
+
+    #[test]
     fn context_err_field() {
         let (log, buf) = make_logger();
         let e = std::io::Error::new(std::io::ErrorKind::Other, "context error");
@@ -476,6 +501,19 @@ mod tests {
         let (log, buf) = make_logger();
         let log = log.level(Level::Warn);
         log.debug().float("x", 1.5).msg("should not appear");
+        assert!(buf.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn disabled_event_numeric_fields_are_noop() {
+        let (log, buf) = make_logger();
+        let log = log.level(Level::Warn);
+        log.debug()
+            .int("i", 1)
+            .uint("u", 2)
+            .dur("d", std::time::Duration::from_millis(10))
+            .time("t", std::time::SystemTime::UNIX_EPOCH)
+            .msg("should not appear");
         assert!(buf.lock().unwrap().is_empty());
     }
 
@@ -615,8 +653,10 @@ mod tests {
             log.info().str("v", &s).send();
             let raw = buf.lock().unwrap();
             let line = std::str::from_utf8(&raw).unwrap().trim_end();
-            serde_json::from_str::<Value>(line)
-                .unwrap_or_else(|e| panic!("byte 0x{b:02x} produced invalid JSON: {e}"));
+            assert!(
+                serde_json::from_str::<Value>(line).is_ok(),
+                "byte 0x{b:02x} produced invalid JSON"
+            );
         }
     }
 

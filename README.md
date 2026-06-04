@@ -10,8 +10,11 @@ is called. The hot path is allocation-free in steady state.
 [![Crates.io](https://img.shields.io/crates/v/wirelog.svg)](https://crates.io/crates/wirelog)
 <!-- Docs.rs Build Status -->
 [![Docs.rs](https://docs.rs/wirelog/badge.svg)](https://docs.rs/wirelog/latest/wirelog/)
+<!-- License -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<!-- Codecov -->
 [![codecov](https://codecov.io/gh/dbrucknr/wirelog/graph/badge.svg)](https://codecov.io/gh/dbrucknr/wirelog)
+<!-- CI (GH Actions) -->
 [![CI](https://github.com/dbrucknr/wirelog/actions/workflows/ci.yml/badge.svg)](https://github.com/dbrucknr/wirelog/actions/workflows/ci.yml)
 
 ---
